@@ -126,7 +126,15 @@ def load_and_transcribe(args: argparse.Namespace, device: str, compute_type: str
         if not args.hf_token:
             raise RuntimeError("Diarization cần HF_TOKEN miễn phí. Tạo Hugging Face read token và truyền -hf-token hoặc đặt biến môi trường HF_TOKEN.")
         print("5/6 Nhận diện người nói bằng pipeline local WhisperX/pyannote…")
-        diarize_model = whisperx.DiarizationPipeline(token=args.hf_token, device=device)
+        try:
+            diarization_pipeline = whisperx.DiarizationPipeline
+        except AttributeError:
+            # WhisperX 3.8+ keeps this class in whisperx.diarize instead of
+            # re-exporting it from the package root.
+            from whisperx.diarize import DiarizationPipeline
+
+            diarization_pipeline = DiarizationPipeline
+        diarize_model = diarization_pipeline(token=args.hf_token, device=device)
         diarize_segments = diarize_model(audio)
         result = whisperx.assign_word_speakers(diarize_segments, result)
     else:
