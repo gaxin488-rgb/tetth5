@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "cinezero-web",
+  "name": "tetth5",
   "main": "./worker/index.js",
   "compatibility_date": "2026-08-04",
   "assets": {
@@ -20,7 +20,8 @@
   }],
   "vars": {
     "SITE_NAME": "CineZero",
-    "ADMIN_UPLOAD_LIMIT_MB": "95"
+    "ADMIN_UPLOAD_LIMIT_MB": "95",
+    "R2_STORAGE_LIMIT_GB": "9"
   },
   "observability": { "enabled": true }
 }

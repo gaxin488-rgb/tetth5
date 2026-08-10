@@ -29,6 +29,7 @@ async function handleApi(request, env, ctx, url) {
   if (url.pathname.startsWith('/api/admin/')) {
     const denied = authorize(request, env);
     if (denied) return denied;
+    if (url.pathname === '/api/admin/storage' && method === 'GET') return adminStorage(env, url);
     if (!env.DB) return json({ error: 'D1 chưa được cấu hình. Hãy dùng wrangler.full.jsonc.' }, 503);
     if (url.pathname === '/api/admin/movies' && method === 'GET') return adminListMovies(env);
     if (url.pathname === '/api/admin/movies' && method === 'POST') return createMovie(request, env);
@@ -200,9 +201,51 @@ async function uploadSmallAsset(request, env, key) {
   const limit = Math.min(Number(env.ADMIN_UPLOAD_LIMIT_MB || 95), 95) * 1024 * 1024;
   const length = Number(request.headers.get('content-length') || 0);
   if (length > limit) return json({ error: 'file_too_large', limit_bytes: limit }, 413);
+  const storageLimit = storageLimitBytes(env);
+  const currentUsage = await bucketUsage(env.VIDEO_BUCKET);
+  const previousObject = await env.VIDEO_BUCKET.head(key);
+  const projectedUsage = currentUsage - Number(previousObject?.size || 0) + length;
+  if (projectedUsage > storageLimit) {
+    return json({ error: 'storage_limit', limit_bytes: storageLimit, current_bytes: currentUsage, projected_bytes: projectedUsage }, 413);
+  }
   const isCaption = /\.(vtt|srt)$/i.test(key);
   await env.VIDEO_BUCKET.put(key, request.body, { httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream', cacheControl: isCaption ? 'public, max-age=60' : 'public, max-age=31536000, immutable' } });
   return json({ ok: true, key, url: `/media/${key}` }, 201);
+}
+
+async function adminStorage(env, url) {
+  if (!env.VIDEO_BUCKET) return json({ error: 'R2 chưa được cấu hình' }, 503);
+  const key = String(url.searchParams.get('key') || '').trim();
+  const usage = await bucketUsage(env.VIDEO_BUCKET);
+  const existing = key ? await env.VIDEO_BUCKET.head(key) : null;
+  const currentBytes = Math.max(0, usage - Number(existing?.size || 0));
+  const limitBytes = storageLimitBytes(env);
+  return json({
+    ok: true,
+    bytes: currentBytes,
+    gb: Number((currentBytes / 1024 ** 3).toFixed(3)),
+    limit_bytes: limitBytes,
+    limit_gb: Number((limitBytes / 1024 ** 3).toFixed(3)),
+    remaining_bytes: Math.max(0, limitBytes - currentBytes),
+    key: key || null
+  });
+}
+
+async function bucketUsage(bucket) {
+  let total = 0;
+  let cursor;
+  do {
+    const page = await bucket.list(cursor ? { cursor, limit: 1000 } : { limit: 1000 });
+    for (const object of page.objects || []) total += Number(object.size || 0);
+    cursor = page.truncated && page.cursor ? page.cursor : null;
+  } while (cursor);
+  return total;
+}
+
+function storageLimitBytes(env) {
+  const configuredGb = Number(env.R2_STORAGE_LIMIT_GB || 9);
+  const safeGb = Math.min(9, Math.max(0.1, Number.isFinite(configuredGb) ? configuredGb : 9));
+  return Math.floor(safeGb * 1024 ** 3);
 }
 
 async function serveMedia(request, env, rawKey) {

@@ -79,12 +79,16 @@ Kết quả nằm trong:
 $env:CINEZERO_SITE_URL = 'https://cinezero-web.example.workers.dev'
 $env:ADMIN_TOKEN = 'token-admin-cua-ban'
 
+# upload-r2.ps1 sẽ kiểm tra giới hạn R2 9 GB trước khi upload
+
 npm run subtitle:auto -- `
   --input "D:\phim\video-goc.mkv" `
   --slug "hanh-trinh-sao-bang" `
   --site-url $env:CINEZERO_SITE_URL `
   --admin-token $env:ADMIN_TOKEN
 ```
+
+Khi upload file đã duyệt bằng `scripts/upload-r2.ps1`, script gọi `/api/admin/storage` và chặn nếu tổng dung lượng sau upload vượt 9 GB. Không dùng `npx wrangler r2 object put` trực tiếp nếu muốn giữ giới hạn này; `-SkipStorageGuard` chỉ dùng sau khi đã tự kiểm tra dung lượng.
 
 Hoặc upload video và tự tạo track trong một lệnh:
 

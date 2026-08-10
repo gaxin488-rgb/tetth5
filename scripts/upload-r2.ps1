@@ -4,12 +4,23 @@ param(
   [string]$ContentType = 'video/mp4',
   [switch]$AutoSubtitle,
   [string]$Slug,
-  [string]$SiteUrl
+  [string]$SiteUrl,
+  [switch]$SkipStorageGuard
 )
 $ErrorActionPreference='Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 if (-not (Test-Path $File)) { throw "Khong tim thay file: $File" }
 if (-not (Test-Path '.\wrangler.full.jsonc')) { throw 'Chua co wrangler.full.jsonc. Hay chay 02-tao-cloud-full.ps1.' }
+$GuardSite = if ($SiteUrl) { $SiteUrl } else { $env:CINEZERO_SITE_URL }
+$GuardToken = $env:ADMIN_TOKEN
+if (-not $SkipStorageGuard) {
+  if (-not $GuardSite -or -not $GuardToken) { throw 'Storage guard can CINEZERO_SITE_URL va ADMIN_TOKEN. Neu chac chan muon bo qua, them -SkipStorageGuard.' }
+  $encodedKey = [uri]::EscapeDataString($Key)
+  $usage = Invoke-RestMethod -Method Get -Uri "$($GuardSite.TrimEnd('/'))/api/admin/storage?key=$encodedKey" -Headers @{ Authorization = "Bearer $GuardToken" }
+  $fileBytes = [int64](Get-Item -LiteralPath $File).Length
+  if ([int64]$usage.remaining_bytes -lt $fileBytes) { throw "R2 storage limit 9 GB: con $($usage.remaining_bytes) bytes, file can $fileBytes bytes." }
+  Write-Host "STORAGE_GUARD_PASS used=$($usage.bytes) limit=$($usage.limit_bytes)" -ForegroundColor DarkCyan
+}
 $CacheControl = if ($Key -match '\.(vtt|srt)$' -or $ContentType -match 'text/vtt|subrip') { 'public, max-age=60' } else { 'public, max-age=31536000, immutable' }
 npx wrangler r2 object put "cinezero-media/$Key" --file="$File" --content-type="$ContentType" "--cache-control=$CacheControl" --remote --config=./wrangler.full.jsonc
 if ($LASTEXITCODE -ne 0) { throw 'UPLOAD_FAIL' }

@@ -119,6 +119,113 @@ def is_non_speech_marker(text: str) -> bool:
     return bool(NON_SPEECH_MARKER.match(text)) or any(mark in text for mark in ("♪", "♫", "♬"))
 
 
+SENTENCE_END = re.compile(r"[。！？!?…]+$")
+TRAILING_PUNCTUATION = set("、。，．,.!?;:：；…)]}】》」』）〕］〉")
+OPENING_PUNCTUATION = set("「『【（([{<《〈")
+
+
+def join_word_text(parts: list[str], language: str) -> str:
+    """Join WhisperX words without losing natural CJK punctuation/spacing."""
+    compact = language.lower() in {"ja", "zh", "th", "lo", "km"}
+    text = ""
+    for raw in parts:
+        word = " ".join(str(raw or "").split())
+        if not word:
+            continue
+        if not text:
+            text = word
+        elif word[0] in TRAILING_PUNCTUATION or text[-1] in OPENING_PUNCTUATION:
+            text += word
+        elif compact:
+            text += word
+        else:
+            text += " " + word
+    return text
+
+
+def split_segment_without_words(segment: dict, language: str) -> list[dict]:
+    """Fallback for languages/models where WhisperX has no word timestamps."""
+    start = max(0.0, float(segment.get("start") or 0.0))
+    end = max(start, float(segment.get("end") or start))
+    text = " ".join(str(segment.get("text") or "").split())
+    if not text:
+        return []
+
+    parts = [part.strip() for part in re.findall(r".+?(?:[。！？!?…]+|$)", text) if part.strip()]
+    if not parts:
+        parts = [text]
+    total_chars = max(1, sum(len(part) for part in parts))
+    pieces: list[dict] = []
+    cursor = start
+    base_id = str(segment.get("id") or "segment")
+    for index, part in enumerate(parts, start=1):
+        piece_end = end if index == len(parts) else cursor + (end - start) * len(part) / total_chars
+        pieces.append({
+            "id": f"{base_id}-{index}",
+            "start": cursor,
+            "end": piece_end,
+            "speaker": segment.get("speaker"),
+            "text": join_word_text([part], language),
+        })
+        cursor = piece_end
+    return pieces
+
+
+def split_segment_with_words(segment: dict, language: str, max_duration: float = 6.0, max_chars: int = 42, max_words: int = 16) -> list[dict]:
+    """Turn an aligned WhisperX segment into readable, short subtitle cues."""
+    words = []
+    for word in segment.get("words") or []:
+        text = str(word.get("word") or word.get("text") or "").strip()
+        try:
+            start = float(word.get("start"))
+            end = float(word.get("end"))
+        except (TypeError, ValueError):
+            continue
+        if text and end >= start:
+            words.append({"word": text, "start": start, "end": end, "speaker": word.get("speaker")})
+    if not words:
+        return split_segment_without_words(segment, language)
+
+    pieces: list[dict] = []
+    current: list[dict] = []
+    base_id = str(segment.get("id") or "segment")
+
+    def flush() -> None:
+        if not current:
+            return
+        text = join_word_text([item["word"] for item in current], language)
+        if text:
+            pieces.append({
+                "id": f"{base_id}-{len(pieces) + 1}",
+                "start": current[0]["start"],
+                "end": current[-1]["end"],
+                "speaker": current[-1].get("speaker") or segment.get("speaker"),
+                "text": text,
+            })
+        current.clear()
+
+    for word in words:
+        if current:
+            previous_speaker = current[-1].get("speaker") or segment.get("speaker")
+            next_speaker = word.get("speaker") or segment.get("speaker")
+            if previous_speaker and next_speaker and previous_speaker != next_speaker:
+                flush()
+        current.append(word)
+        text = join_word_text([item["word"] for item in current], language)
+        duration = current[-1]["end"] - current[0]["start"]
+        if SENTENCE_END.search(text) or duration >= max_duration or len(text) >= max_chars or len(current) >= max_words:
+            flush()
+    flush()
+    return pieces
+
+
+def split_transcript_segments(raw_segments: list[dict], language: str) -> list[dict]:
+    split_segments: list[dict] = []
+    for segment in raw_segments:
+        split_segments.extend(split_segment_with_words(segment, language))
+    return split_segments
+
+
 def filter_segments(raw_segments: list[dict], zones: list[tuple[str, float, float]]) -> tuple[list[dict], list[dict]]:
     kept: list[dict] = []
     removed: list[dict] = []
@@ -242,7 +349,8 @@ def main() -> int:
     zones = speech_music_zones(input_path)
     result, language = load_and_transcribe(args, device, compute_type)
     raw_segments = result.get("segments") or []
-    kept, removed = filter_segments(raw_segments, zones)
+    split_segments = split_transcript_segments(raw_segments, language)
+    kept, removed = filter_segments(split_segments, zones)
     vtt = build_vtt(kept, language, not args.no_speakers and not args.no_diarize)
 
     output = Path(args.output or Path("content") / "generated-subtitles" / f"{args.slug}.{language}.vtt").expanduser().resolve()
@@ -256,6 +364,8 @@ def main() -> int:
         "device": device,
         "compute_type": compute_type,
         "speech_music_zones": [{"label": label, "start": start, "end": end} for label, start, end in zones],
+        "raw_segment_count": len(raw_segments),
+        "split_segment_count": len(split_segments),
         "kept": kept,
         "removed": removed,
     }, ensure_ascii=False, indent=2), encoding="utf-8")

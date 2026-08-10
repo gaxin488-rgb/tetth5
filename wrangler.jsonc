@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "cinezero-web",
+  "name": "tetth5",
   "main": "./worker/index.js",
   "compatibility_date": "2026-08-04",
   "assets": {
@@ -9,9 +9,19 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/media/*", "/health"]
   },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "cinezero-db",
+    "database_id": "8111077c-842c-4f3c-a1ea-88d1b5798ad5"
+  }],
+  "r2_buckets": [{
+    "binding": "VIDEO_BUCKET",
+    "bucket_name": "cinezero-media"
+  }],
   "vars": {
     "SITE_NAME": "CineZero",
-    "ADMIN_UPLOAD_LIMIT_MB": "95"
+    "ADMIN_UPLOAD_LIMIT_MB": "95",
+    "R2_STORAGE_LIMIT_GB": "9"
   },
   "observability": { "enabled": true }
 }
