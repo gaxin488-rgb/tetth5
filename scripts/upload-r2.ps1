@@ -10,7 +10,8 @@ $ErrorActionPreference='Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 if (-not (Test-Path $File)) { throw "Khong tim thay file: $File" }
 if (-not (Test-Path '.\wrangler.full.jsonc')) { throw 'Chua co wrangler.full.jsonc. Hay chay 02-tao-cloud-full.ps1.' }
-npx wrangler r2 object put "cinezero-media/$Key" --file="$File" --content-type="$ContentType" --cache-control='public, max-age=31536000, immutable' --remote --config=./wrangler.full.jsonc
+$CacheControl = if ($Key -match '\.(vtt|srt)$' -or $ContentType -match 'text/vtt|subrip') { 'public, max-age=60' } else { 'public, max-age=31536000, immutable' }
+npx wrangler r2 object put "cinezero-media/$Key" --file="$File" --content-type="$ContentType" "--cache-control=$CacheControl" --remote --config=./wrangler.full.jsonc
 if ($LASTEXITCODE -ne 0) { throw 'UPLOAD_FAIL' }
 Write-Host "UPLOAD_PASS video_key=$Key" -ForegroundColor Green
 if ($AutoSubtitle) {

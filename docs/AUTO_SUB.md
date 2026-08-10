@@ -99,6 +99,19 @@ Hoặc upload video và tự tạo track trong một lệnh:
 
 Người xem bật/tắt phụ đề bằng nút `CC`. Video gốc và chất lượng hình ảnh không thay đổi.
 
+## Kiểm tra trước khi publish
+
+Để kiểm tra lời thoại, không truyền `CINEZERO_SITE_URL` và `ADMIN_TOKEN` khi chạy auto-sub. Sau khi sửa/duyệt file VTT, upload file đó lên R2:
+
+```powershell
+.\scripts\upload-r2.ps1 `
+  -File '.\content\generated-subtitles\hanh-trinh-sao-bang.vi.vtt' `
+  -Key 'subtitles/hanh-trinh-sao-bang/vi.vtt' `
+  -ContentType 'text/vtt; charset=utf-8'
+```
+
+Mở `/admin.html`, nhập `ADMIN_TOKEN`, chọn phim, nhập mã ngôn ngữ `vi` và R2 key `subtitles/hanh-trinh-sao-bang/vi.vtt`, rồi đăng ký track. VTT được cache ngắn nên khi sửa lại sẽ cập nhật nhanh hơn video.
+
 ## Giới hạn cần biết
 
 Nhận diện giọng hát không tuyệt đối trong cảnh vừa hát vừa nói, thoại chồng tiếng hoặc nhạc rất lớn. Hãy xem `segments.json` trước khi phát hành. WhisperX cũng ghi nhận diarization có thể sai ở các đoạn chồng giọng; khi cần, có thể sửa WebVTT bằng tay mà không cần xử lý lại video.
