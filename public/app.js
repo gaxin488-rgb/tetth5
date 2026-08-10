@@ -142,6 +142,53 @@
     document.querySelector('#detailFavorite').addEventListener('click', e => { toggleFavorite(m.slug); e.currentTarget.textContent = isFavorite(m.slug)?'♥ Đã lưu':'♡ Thêm vào danh sách'; });
   }
 
+  function parseVtt(text) {
+    const blocks = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split(/\n{2,}/);
+    const toSeconds = value => {
+      const parts = value.split(':').map(Number);
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      return NaN;
+    };
+    return blocks.map(block => {
+      const lines = block.split('\n');
+      const timingIndex = lines.findIndex(line => line.includes('-->'));
+      if (timingIndex < 0) return null;
+      const timing = lines[timingIndex].match(/(\d{2}:\d{2}(?::\d{2})?\.\d{3})\s+-->\s+(\d{2}:\d{2}(?::\d{2})?\.\d{3})/);
+      if (!timing) return null;
+      const start = toSeconds(timing[1]);
+      const end = toSeconds(timing[2]);
+      const cueText = lines.slice(timingIndex + 1).join('\n').trim();
+      return Number.isFinite(start) && Number.isFinite(end) && cueText ? { start, end, text: cueText } : null;
+    }).filter(Boolean);
+  }
+
+  async function attachSubtitleOverlay(video, source, nativeTrack) {
+    const overlay = document.querySelector('#subtitleOverlay');
+    if (!overlay || !source) return;
+    try {
+      const response = await fetch(source, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`VTT ${response.status}`);
+      const cues = parseVtt(await response.text());
+      const render = () => {
+        const nativeCues = nativeTrack?.cues;
+        if (nativeCues && nativeCues.length) {
+          overlay.textContent = '';
+          overlay.classList.remove('visible');
+          return;
+        }
+        const now = Number(video.currentTime || 0);
+        const active = cues.filter(cue => now >= cue.start && now < cue.end).map(cue => cue.text).join('\n');
+        overlay.textContent = active;
+        overlay.classList.toggle('visible', Boolean(active));
+      };
+      ['loadedmetadata', 'timeupdate', 'seeking', 'seeked'].forEach(eventName => video.addEventListener(eventName, render));
+      render();
+    } catch (error) {
+      console.warn('Không tải được lớp phụ đề dự phòng:', error.message);
+    }
+  }
+
   async function attachSubtitles(video, slug) {
     if (IS_FILE_PREVIEW || !video?.isConnected) return;
     try {
@@ -155,15 +202,22 @@
       const status = document.querySelector('#subtitleStatus');
       if (!tracks.length || !video.isConnected) return;
       const hasDefault = tracks.some(track => Boolean(track.is_default));
+      let firstSource = '';
+      let firstNativeTrack = null;
       tracks.forEach((track, index) => {
         const element = document.createElement('track');
         element.kind = track.kind || 'subtitles';
-        element.src = track.url || `/media/${String(track.r2_key || '').split('/').map(encodeURIComponent).join('/')}`;
+        const source = track.url || `/media/${String(track.r2_key || '').split('/').map(encodeURIComponent).join('/')}`;
+        const version = encodeURIComponent(`${track.id || 'track'}-${track.language_code || 'und'}-${track.r2_key || ''}`);
+        element.src = `${source}${source.includes('?') ? '&' : '?'}v=${version}`;
         element.srclang = track.language_code || 'und';
         element.label = track.label || track.language_code || 'Phụ đề';
         element.default = Boolean(track.is_default) || (!hasDefault && index === 0);
         video.appendChild(element);
+        if (element.track) element.track.mode = 'showing';
+        if (!firstSource) { firstSource = element.src; firstNativeTrack = element.track; }
       });
+      attachSubtitleOverlay(video, firstSource, firstNativeTrack);
       if (status) {
         status.hidden = false;
         status.textContent = `Có ${tracks.length} bản phụ đề rời · bật bằng nút CC của trình phát`;
@@ -178,7 +232,7 @@
     if (!m) return notFound();
     const source = m.video_key && !IS_FILE_PREVIEW ? `/media/${m.video_key.split('/').map(encodeURIComponent).join('/')}` : m.video_url;
     const progress = store.get('cinezero_progress', {})[slug] || 0;
-    app.innerHTML = `<section class="watch-page"><div class="player-shell"><div class="player-wrap">${source ? `<video id="videoPlayer" controls playsinline preload="metadata" poster="${esc(m.backdrop_url)}"><source src="${esc(source)}" type="video/mp4">Trình duyệt không hỗ trợ video HTML5.</video>` : `<div class="player-empty"><div><h2>Chưa có video cho phim này</h2><p>Upload video lên R2 rồi điền <strong>video_key</strong> trong D1. Website không cần chạy trên máy cá nhân.</p><code>movies/${esc(m.slug)}/movie-720p.mp4</code></div></div>`}</div>
+    app.innerHTML = `<section class="watch-page"><div class="player-shell"><div class="player-wrap">${source ? `<video id="videoPlayer" controls playsinline preload="metadata" poster="${esc(m.backdrop_url)}"><source src="${esc(source)}" type="video/mp4">Trình duyệt không hỗ trợ video HTML5.</video><div class="subtitle-overlay" id="subtitleOverlay" aria-live="polite"></div>` : `<div class="player-empty"><div><h2>Chưa có video cho phim này</h2><p>Upload video lên R2 rồi điền <strong>video_key</strong> trong D1. Website không cần chạy trên máy cá nhân.</p><code>movies/${esc(m.slug)}/movie-720p.mp4</code></div></div>`}</div>
       <div class="watch-info"><div><span class="eyebrow">Đang xem</span><h1>${esc(m.title)}</h1><div class="meta"><span>${esc(m.release_year)}</span><span>${esc(m.quality)}</span><span>${esc(m.genres.join(' · '))}</span></div></div><div class="watch-actions"><a class="button secondary" href="#movie/${encodeURIComponent(m.slug)}">ⓘ Chi tiết</a><button class="button secondary" id="watchFavorite">${isFavorite(m.slug)?'♥ Đã lưu':'♡ Lưu phim'}</button></div></div>
       ${source ? '<p class="subtitle-status" id="subtitleStatus" hidden></p>' : ''}
       ${source ? `<div class="progress-card"><div class="section-head"><div><strong>Tiến độ xem</strong><p id="progressText">Đang đồng bộ trên thiết bị này</p></div></div><div class="progress-track"><div class="progress-value" id="progressValue"></div></div></div>` : ''}</div></section>`;

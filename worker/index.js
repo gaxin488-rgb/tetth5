@@ -252,12 +252,17 @@ async function serveMedia(request, env, rawKey) {
   if (!env.VIDEO_BUCKET) return json({ error: 'R2 chưa được cấu hình' }, 503);
   const key = rawKey.split('/').map(decodeURIComponent).join('/');
   if (!key || key.includes('..')) return json({ error: 'invalid_key' }, 400);
-  const object = await env.VIDEO_BUCKET.get(key, { range: request.headers });
+  const isCaption = /\.(vtt|srt)$/i.test(key);
+  // Browsers parse WebVTT more reliably as one complete 200 response.
+  // Keep byte-range support for video, where seeking depends on it.
+  const object = !isCaption
+    ? await env.VIDEO_BUCKET.get(key, { range: request.headers })
+    : await env.VIDEO_BUCKET.get(key);
   if (!object) return json({ error: 'media_not_found' }, 404);
   const headers = new Headers(); object.writeHttpMetadata(headers); headers.set('etag', object.httpEtag); headers.set('accept-ranges','bytes');
-  headers.set('cache-control', headers.get('cache-control') || 'public, max-age=86400');
+  headers.set('cache-control', isCaption ? 'no-cache, must-revalidate' : (headers.get('cache-control') || 'public, max-age=86400'));
   let status = 200;
-  if (object.range && typeof object.range.offset === 'number') {
+  if (!isCaption && object.range && typeof object.range.offset === 'number') {
     status = 206; const end = object.range.offset + object.range.length - 1;
     headers.set('content-range', `bytes ${object.range.offset}-${end}/${object.size}`);
     headers.set('content-length', String(object.range.length));
