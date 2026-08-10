@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#14532d"/><stop offset="1" stop-color="#0f766e"/></linearGradient><filter id="n"><feTurbulence baseFrequency=".8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .08 0"/></filter></defs>
+<rect width="600" height="900" fill="url(#g)"/><rect width="600" height="900" filter="url(#n)" opacity=".45"/>
+<circle cx="470" cy="180" r="170" fill="white" opacity=".08"/><circle cx="120" cy="730" r="240" fill="black" opacity=".15"/>
+<text x="48" y="100" font-family="Arial,sans-serif" font-size="26" fill="white" opacity=".72">CINEZERO ORIGINAL</text>
+<text x="300" y="455" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="132" fill="white" opacity=".94">NGK</text>
+<text x="48" y="786" font-family="Arial,sans-serif" font-weight="700" font-size="42" fill="white">Người Giữ Khu Rừng</text>
+<text x="48" y="836" font-family="Arial,sans-serif" font-size="25" fill="white" opacity=".75">2025 · HD · T13</text>
+</svg>

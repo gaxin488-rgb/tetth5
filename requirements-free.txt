@@ -1,0 +1,4 @@
+# Local-only subtitle processing. No paid API and no AI API key.
+# Use Python 3.13 or lower; inaSpeechSegmenter does not support Python 3.14+.
+whisperx
+inaSpeechSegmenter

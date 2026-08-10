@@ -1,0 +1,8 @@
+1. Giai nen toan bo vao D:\web
+2. Mo PowerShell:
+   cd D:\web
+   Set-ExecutionPolicy -Scope Process Bypass -Force
+   .\scripts\01-deploy-ngay.ps1
+3. Muon bat D1 + R2:
+   .\scripts\02-tao-cloud-full.ps1
+4. Huong dan day du: README_VI.md va docs\DEPLOY.md

@@ -1,0 +1,9 @@
+{
+  "name": "CineZero",
+  "short_name": "CineZero",
+  "start_url": "/#home",
+  "display": "standalone",
+  "background_color": "#090b10",
+  "theme_color": "#090b10",
+  "icons": [{"src":"/assets/logo.svg","sizes":"any","type":"image/svg+xml"}]
+}

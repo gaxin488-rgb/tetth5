@@ -1,0 +1,18 @@
+{
+  "name": "cinezero-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web phim cá nhân triển khai miễn phí trên Cloudflare Workers, D1 và R2.",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "deploy:full": "wrangler deploy --config wrangler.full.jsonc",
+    "db:schema": "wrangler d1 execute cinezero-db --remote --file=./schema.sql",
+    "db:seed": "wrangler d1 execute cinezero-db --remote --file=./seed.sql",
+    "subtitle:auto": "node scripts/auto-sub.mjs",
+    "check": "node scripts/check-project.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.118.0"
+  }
+}
