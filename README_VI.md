@@ -22,11 +22,11 @@ D:\web
 - Trang quản trị `/admin.html`.
 - Script nén video bằng FFmpeg và upload R2.
 - Auto subtitle WebVTT local 0đ: nhận diện ngôn ngữ, người nói, speech/music/noise và lọc lời nhạc mà không encode lại video. Xem [docs/AUTO_SUB.md](docs/AUTO_SUB.md).
-- GitHub Actions chỉ dùng để kiểm tra/deploy website; nhận diện subtitle chạy trên PC để có thể kiểm tra lời thoại trước khi publish.
+- GitHub Actions chỉ kiểm tra source; Cloudflare Workers Builds deploy website. Nhận diện subtitle chạy trên PC để có thể kiểm tra lời thoại trước khi publish.
 - Chế độ deploy ngay không cần D1/R2.
 - GitHub Actions để tự deploy.
 
-Kiến trúc production: PC nhận diện và kiểm tra phụ đề → GitHub lưu source và chạy deploy → Cloudflare Worker/D1 phục vụ website/API → Cloudflare R2 lưu video và WebVTT.
+Kiến trúc production: PC nhận diện và kiểm tra phụ đề → GitHub lưu source/chạy kiểm tra → Cloudflare Workers Builds deploy → Cloudflare Worker/D1 phục vụ website/API → Cloudflare R2 lưu video và WebVTT.
 
 ## Cài vào D:\web
 Giải nén ZIP. Nếu ZIP tạo thêm thư mục `CineZero_D_web`, hãy chép toàn bộ nội dung bên trong vào `D:\web`.

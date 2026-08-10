@@ -14,7 +14,7 @@ Tất cả model chạy local, không gọi API AI trả phí và không cần k
 ## Phân vai hệ thống
 
 - PC: tải video, nhận diện ngôn ngữ/người nói, lọc nhạc và âm thanh ngoài; bạn kiểm tra `.vtt` và `.segments.json` trước khi phát hành.
-- GitHub: lưu mã nguồn và chạy GitHub Actions để kiểm tra/deploy website; không chạy nhận diện video.
+- GitHub: lưu mã nguồn và chạy kiểm tra; Cloudflare Workers Builds nhận commit để deploy website; không chạy nhận diện video.
 - Cloudflare Worker/D1: phục vụ website, API và thông tin track subtitle.
 - Cloudflare R2: lưu video gốc, video đã nén và file WebVTT rời.
 
