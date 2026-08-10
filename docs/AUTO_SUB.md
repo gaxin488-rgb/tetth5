@@ -90,6 +90,8 @@ npm run subtitle:auto -- `
 
 Khi upload file đã duyệt bằng `scripts/upload-r2.ps1`, script gọi `/api/admin/storage` và chặn nếu tổng dung lượng sau upload vượt 9 GB. Không dùng `npx wrangler r2 object put` trực tiếp nếu muốn giữ giới hạn này; `-SkipStorageGuard` chỉ dùng sau khi đã tự kiểm tra dung lượng.
 
+Để nhận email khi có phát sinh phí, vào Cloudflare `Manage Account > Billing > Billable Usage > Create budget alert` và đặt ngưỡng rất thấp (ví dụ `0.01 USD`). Budget alert chỉ gửi cảnh báo, không tự dừng dịch vụ.
+
 Hoặc upload video và tự tạo track trong một lệnh:
 
 ```powershell
