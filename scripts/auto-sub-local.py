@@ -18,6 +18,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from character_rules import apply_character_rules
+
 
 NON_SPEECH_MARKER = re.compile(
     r"^\s*[\[(].*(?:music|song|sing|singing|instrumental|applause|laughter|noise|sound effect|âm nhạc|nhạc|vỗ tay|cười|tiếng động).*[\])]\s*$",
@@ -38,6 +40,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-diarize", action="store_true", help="Skip speaker diarization; not recommended")
     parser.add_argument("--no-align", action="store_true", help="Skip word alignment if the language has no alignment model")
     parser.add_argument("--no-speakers", action="store_true", help="Do not add visible speaker labels to VTT cues")
+    parser.add_argument("--character-profile", default=os.getenv("CHARACTER_PROFILE"), help="JSON profile mapping diarization speaker IDs to characters")
+    parser.add_argument("--pronoun-rules", default=os.getenv("PRONOUN_RULES"), help="JSON Vietnamese pronoun rule overrides")
     parser.add_argument("--output", default=None, help="Local WebVTT output path")
     parser.add_argument("--report", default=None, help="Local JSON report path")
     parser.add_argument("--output-key", default=None, help="R2 key for publishing")
@@ -287,7 +291,7 @@ def build_vtt(segments: list[dict], language: str, show_speakers: bool) -> str:
     labels: dict[str, str] = {}
     cues = []
     for index, item in enumerate(segments, start=1):
-        voice = speaker_label(item.get("speaker"), labels) if show_speakers else ""
+        voice = (item.get("speaker_label") or speaker_label(item.get("speaker"), labels)) if show_speakers else ""
         prefix = f"<v {escape_vtt(voice)}>[{escape_vtt(voice)}] " if show_speakers else ""
         cues.append(f"{index}\n{timecode(item['start'])} --> {timecode(item['end'])}\n{prefix}{escape_vtt(item['text'])}")
     return "WEBVTT\n\n" + "\n".join([
@@ -351,6 +355,21 @@ def main() -> int:
     raw_segments = result.get("segments") or []
     split_segments = split_transcript_segments(raw_segments, language)
     kept, removed = filter_segments(split_segments, zones)
+    profile_path = Path(args.character_profile).expanduser().resolve() if args.character_profile else Path(__file__).resolve().parents[1] / "profiles" / f"{args.slug}.json"
+    rules_path = Path(args.pronoun_rules).expanduser().resolve() if args.pronoun_rules else Path(__file__).resolve().parents[1] / "config" / "pronoun-rules.vi.json"
+    character_profile = None
+    pronoun_rules = None
+    if profile_path.is_file():
+        character_profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    elif args.character_profile:
+        raise RuntimeError(f"Không tìm thấy character profile: {profile_path}")
+    if rules_path.is_file():
+        pronoun_rules = json.loads(rules_path.read_text(encoding="utf-8"))
+    elif args.pronoun_rules:
+        raise RuntimeError(f"Không tìm thấy pronoun rules: {rules_path}")
+    kept, character_summary = apply_character_rules(kept, character_profile, pronoun_rules)
+    character_summary["profile_path"] = str(profile_path) if character_profile else None
+    character_summary["rules_path"] = str(rules_path) if pronoun_rules else None
     vtt = build_vtt(kept, language, not args.no_speakers and not args.no_diarize)
 
     output = Path(args.output or Path("content") / "generated-subtitles" / f"{args.slug}.{language}.vtt").expanduser().resolve()
@@ -366,12 +385,15 @@ def main() -> int:
         "speech_music_zones": [{"label": label, "start": start, "end": end} for label, start, end in zones],
         "raw_segment_count": len(raw_segments),
         "split_segment_count": len(split_segments),
+        "character_rules": character_summary,
         "kept": kept,
         "removed": removed,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Đã tạo {len(kept)} cue thoại; loại {len(removed)} cue nhạc/âm thanh.")
     print(f"VTT: {output}")
     print(f"Report: {report}")
+    if character_summary.get("enabled"):
+        print(f"Character rules: {len(character_summary.get('speakers') or {})} speaker profile(s), {len(character_summary.get('unmapped_speakers') or [])} unmapped speaker(s).")
     publish(args, language, vtt)
     return 0
 

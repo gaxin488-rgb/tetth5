@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "title": "Yosuga no Sora - 01",
+  "notes": "Điền speaker_map sau khi nghe các đoạn SPEAKER_00, SPEAKER_01... trong segments.json.",
+  "speaker_map": {},
+  "characters": {
+    "haruka": {
+      "display_name": "Haruka Kasuga",
+      "age": 16,
+      "gender": "male",
+      "role": "student",
+      "default_self": "tớ"
+    },
+    "sora": {
+      "display_name": "Sora Kasuga",
+      "age": 16,
+      "gender": "female",
+      "role": "student",
+      "default_self": "tớ"
+    },
+    "kazuha": {
+      "display_name": "Kazuha Migiwa",
+      "age": 16,
+      "gender": "female",
+      "role": "student",
+      "default_self": "tớ"
+    },
+    "akira": {
+      "display_name": "Akira Amatsume",
+      "age": 16,
+      "gender": "female",
+      "role": "student",
+      "default_self": "tớ"
+    },
+    "kuranaka": {
+      "display_name": "Kuranaka-san",
+      "age": 35,
+      "gender": "female",
+      "role": "teacher",
+      "default_self": "cô"
+    },
+    "motoka": {
+      "display_name": "Motoka Nogisaka",
+      "age": 16,
+      "gender": "female",
+      "role": "student",
+      "default_self": "tôi"
+    }
+  },
+  "relations": {
+    "haruka->sora": {
+      "relation": "siblings",
+      "self": "anh",
+      "other": "em",
+      "confidence": "profile"
+    },
+    "sora->haruka": {
+      "relation": "siblings",
+      "self": "em",
+      "other": "anh",
+      "confidence": "profile"
+    },
+    "haruka->kuranaka": {
+      "relation": "student_teacher",
+      "self": "em",
+      "other": "cô",
+      "confidence": "profile"
+    },
+    "sora->kuranaka": {
+      "relation": "student_teacher",
+      "self": "em",
+      "other": "cô",
+      "confidence": "profile"
+    },
+    "kuranaka->haruka": {
+      "relation": "teacher_student",
+      "self": "cô",
+      "other": "cháu",
+      "confidence": "profile"
+    },
+    "kuranaka->sora": {
+      "relation": "teacher_student",
+      "self": "cô",
+      "other": "cháu",
+      "confidence": "profile"
+    },
+    "haruka->akira": {
+      "relation": "same_age_friendly",
+      "self": "tớ",
+      "other": "cậu",
+      "confidence": "profile"
+    },
+    "akira->haruka": {
+      "relation": "same_age_friendly",
+      "self": "tớ",
+      "other": "cậu",
+      "confidence": "profile"
+    }
+  },
+  "default_listener": {},
+  "scene_targets": []
+}

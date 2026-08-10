@@ -1,0 +1,53 @@
+{
+  "fallback": {
+    "self": "tôi",
+    "other": "bạn",
+    "confidence": "unknown"
+  },
+  "same_age_friendly": {
+    "self": "tớ",
+    "other": "cậu",
+    "confidence": "heuristic"
+  },
+  "older_to_younger": {
+    "self": {
+      "male": "anh",
+      "female": "chị",
+      "unknown": "tôi"
+    },
+    "other": "em",
+    "confidence": "heuristic"
+  },
+  "younger_to_older": {
+    "self": "em",
+    "other": {
+      "male": "anh",
+      "female": "chị",
+      "unknown": "cô/chú"
+    },
+    "confidence": "heuristic"
+  },
+  "adult_to_child": {
+    "self": {
+      "male": "chú",
+      "female": "cô",
+      "unknown": "tôi"
+    },
+    "other": "cháu",
+    "confidence": "heuristic"
+  },
+  "child_to_adult": {
+    "self": "cháu",
+    "other": {
+      "male": "chú",
+      "female": "cô",
+      "unknown": "cô/chú"
+    },
+    "confidence": "heuristic"
+  },
+  "formal": {
+    "self": "tôi",
+    "other": "bạn",
+    "confidence": "profile"
+  }
+}

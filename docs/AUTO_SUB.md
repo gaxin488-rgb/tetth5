@@ -50,6 +50,41 @@ $env:HF_TOKEN = 'hf_token_cua_ban'
 
 Nếu không muốn dùng diarization, chạy thêm `--no-diarize`; phụ đề vẫn có nhận diện ngôn ngữ và lọc speech/music/noise nhưng không có người nói.
 
+## Rule nhân vật và xưng hô tiếng Việt
+
+Diarization chỉ biết các cụm giọng như `SPEAKER_00`, `SPEAKER_01`; nó không thể tự biết đó là Haruka, Sora hay nhân vật nào. Bộ rule local dùng profile để ánh xạ ID giọng sang nhân vật, lưu tuổi/giới tính/vai trò đã kiểm tra, rồi chọn xưng hô theo quan hệ và người đang được nói tới.
+
+Profile mẫu cho video hiện tại nằm ở `profiles/yosuga-no-sora-01.json`. Sau lần chạy có diarization, mở `segments.json`, nghe từng `SPEAKER_XX`, rồi điền:
+
+```json
+"speaker_map": {
+  "SPEAKER_00": "haruka",
+  "SPEAKER_01": "sora"
+}
+```
+
+Nếu một cảnh có nhiều người, thêm người nghe theo khoảng thời gian:
+
+```json
+"scene_targets": [
+  {"start": 34.4, "end": 90, "speaker": "SPEAKER_00", "listener": "sora"}
+]
+```
+
+Chạy lại pipeline, không dùng `--no-diarize`:
+
+```powershell
+npm run subtitle:auto -- `
+  --input "D:\phim\video-goc.mkv" `
+  --slug "yosuga-no-sora-01" `
+  --character-profile ".\profiles\yosuga-no-sora-01.json" `
+  --pronoun-rules ".\config\pronoun-rules.vi.json"
+```
+
+Kết quả sẽ có tên nhân vật trong VTT khi bật nhãn người nói, còn `.segments.json` có thêm `character_name`, `character_age`, `character_gender`, `character_age_band`, `pronouns` và `needs_review`. Cue chưa map được nhân vật hoặc chưa biết người nghe sẽ bị đánh dấu để kiểm tra, không tự đoán âm thầm.
+
+Tuổi và giới tính trong profile là dữ liệu người dùng xác nhận; không nên suy ra chắc chắn chỉ từ giọng nói. Rule chỉ tự động chọn xưng hô khi có đủ quan hệ, tuổi/vai trò; quan hệ đặc biệt như anh-em song sinh nên ghi trong `relations` để ưu tiên kết quả thủ công.
+
 ## Tạo phụ đề local
 
 ```powershell
