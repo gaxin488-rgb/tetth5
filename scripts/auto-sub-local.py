@@ -51,6 +51,38 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_hf_token(explicit: str | None) -> str | None:
+    """Resolve a Hugging Face token without requiring it on every run.
+
+    The preferred source is the command-line/environment value.  When it is
+    absent, huggingface_hub (or its standard Windows cache files) is checked.
+    The token is never printed or written to project files.
+    """
+    if explicit and explicit.strip():
+        return explicit.strip()
+
+    try:
+        from huggingface_hub import get_token
+
+        cached = get_token()
+        if cached and cached.strip():
+            return cached.strip()
+    except Exception:
+        pass
+
+    for token_path in (
+        Path.home() / ".cache" / "huggingface" / "token",
+        Path.home() / ".huggingface" / "token",
+    ):
+        try:
+            cached = token_path.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError):
+            continue
+        if cached:
+            return cached
+    return None
+
+
 def choose_device(requested: str) -> str:
     if requested != "auto":
         return requested
@@ -341,8 +373,9 @@ def publish(args: argparse.Namespace, language: str, vtt: str) -> None:
 
 def main() -> int:
     args = parse_args()
+    args.hf_token = resolve_hf_token(args.hf_token)
     if not args.no_diarize and not args.hf_token:
-        raise RuntimeError("Diarization cần HF_TOKEN miễn phí. Đặt biến môi trường HF_TOKEN hoặc chạy thêm --no-diarize.")
+        raise RuntimeError("Chưa có Hugging Face token. Chạy `hf auth login` một lần, hoặc đặt HF_TOKEN/--hf-token; không cần token nếu dùng --no-diarize.")
     input_path = Path(args.input).expanduser().resolve()
     if not input_path.is_file():
         raise RuntimeError(f"Không tìm thấy input: {input_path}")

@@ -81,6 +81,8 @@ npm run subtitle:auto -- `
   --pronoun-rules ".\config\pronoun-rules.vi.json"
 ```
 
+Để không phải nhập token mỗi lần, đăng nhập Hugging Face một lần bằng `hf auth login`. Script sẽ tự đọc token trong cache của Hugging Face; token không được ghi vào Git hoặc in ra màn hình. Model diarization vẫn yêu cầu chấp nhận điều kiện sử dụng của pipeline trên Hugging Face lần đầu.
+
 Kết quả sẽ có tên nhân vật trong VTT khi bật nhãn người nói, còn `.segments.json` có thêm `character_name`, `character_age`, `character_age_band`, `character_gender`, `character_role`, `pronouns` và `needs_review`. Các trường `*_confidence` cho biết tuổi/giới tính là dữ liệu profile hay còn suy luận. Cue chưa map được nhân vật hoặc chưa biết người nghe sẽ bị đánh dấu để kiểm tra, không tự đoán âm thầm.
 
 Tuổi và giới tính trong profile là dữ liệu người dùng xác nhận; không nên suy ra chắc chắn chỉ từ giọng nói. Rule chỉ tự động chọn xưng hô khi có đủ quan hệ, tuổi/vai trò; quan hệ đặc biệt như anh-em song sinh nên ghi trong `relations` để ưu tiên kết quả thủ công.
