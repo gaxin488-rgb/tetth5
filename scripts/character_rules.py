@@ -111,6 +111,16 @@ def _gender(value: Any) -> str:
     return aliases.get(raw, "unknown")
 
 
+def _character_age_band(character: dict[str, Any] | None) -> str:
+    """Prefer a reviewed age_band when an exact age is unavailable."""
+    if not character:
+        return "unknown"
+    declared = str(character.get("age_band") or "").strip().lower()
+    if declared in {"child", "teen", "adult", "senior", "unknown"}:
+        return declared
+    return age_band(character.get("age"))
+
+
 def _name(character_id: str | None, character: dict[str, Any] | None) -> str | None:
     if not character:
         return None
@@ -165,11 +175,19 @@ def _heuristic_relation(speaker: dict[str, Any] | None, listener: dict[str, Any]
         return "fallback"
     speaker_age = _age(speaker.get("age"))
     listener_age = _age(listener.get("age"))
+    speaker_band = _character_age_band(speaker)
+    listener_band = _character_age_band(listener)
     speaker_role = str(speaker.get("role") or "").lower()
     listener_role = str(listener.get("role") or "").lower()
-    if speaker_role in {"teacher", "parent", "adult_guardian"} and listener_age is not None and listener_age < 18:
+    if (
+        speaker_role in {"teacher", "parent", "adult_guardian"}
+        or (speaker_age is None and speaker_band == "adult" and listener_band in {"child", "teen"})
+    ):
         return "adult_to_child"
-    if listener_role in {"teacher", "parent", "adult_guardian"} and speaker_age is not None and speaker_age < 18:
+    if (
+        listener_role in {"teacher", "parent", "adult_guardian"}
+        or (listener_age is None and listener_band == "adult" and speaker_band in {"child", "teen"})
+    ):
         return "child_to_adult"
     if speaker_age is not None and listener_age is not None:
         if speaker_age >= listener_age + 8:
@@ -255,9 +273,12 @@ def apply_character_rules(
             output["character_id"] = character_id
             output["character_name"] = display_name
             output["character_age"] = _age(character.get("age"))
-            output["character_age_band"] = age_band(character.get("age"))
+            output["character_age_band"] = _character_age_band(character)
+            output["character_age_confidence"] = character.get("age_confidence", "profile")
             output["character_gender"] = _gender(character.get("gender"))
+            output["character_gender_confidence"] = character.get("gender_confidence", "profile")
             output["character_role"] = character.get("role")
+            output["character_metadata_status"] = normalized.get("metadata_status", "profile")
             output["speaker_label"] = display_name
             speaker_confidence = "profile"
         else:
@@ -267,8 +288,11 @@ def apply_character_rules(
             output["character_name"] = None
             output["character_age"] = None
             output["character_age_band"] = "unknown"
+            output["character_age_confidence"] = "unknown"
             output["character_gender"] = "unknown"
+            output["character_gender_confidence"] = "unknown"
             output["character_role"] = None
+            output["character_metadata_status"] = "unknown"
             output["speaker_label"] = anonymous_labels[raw_speaker] if raw_speaker else "Người nói"
             speaker_confidence = "unknown"
             if raw_speaker:
@@ -301,8 +325,11 @@ def apply_character_rules(
                 "character_name": output["character_name"],
                 "age": output["character_age"],
                 "age_band": output["character_age_band"],
+                "age_confidence": output["character_age_confidence"],
                 "gender": output["character_gender"],
+                "gender_confidence": output["character_gender_confidence"],
                 "role": output["character_role"],
+                "metadata_status": output["character_metadata_status"],
                 "confidence": speaker_confidence,
             }
         enriched.append(output)
@@ -324,4 +351,3 @@ def apply_character_rules(
         ],
     }
     return enriched, summary
-

@@ -1,87 +1,152 @@
 {
   "schema_version": 1,
   "title": "Yosuga no Sora - 01",
-  "notes": "Điền speaker_map sau khi nghe các đoạn SPEAKER_00, SPEAKER_01... trong segments.json.",
+  "metadata_status": "review_required",
+  "notes": "Speaker_map phải được điền sau khi diarization tạo ra SPEAKER_00, SPEAKER_01... Tuổi là dữ liệu khởi tạo/suy luận và cần kiểm tra lại trước khi xuất bản.",
+  "sources": [
+    {
+      "label": "Trang nhân vật chính thức",
+      "url": "https://king-cr.jp/special/yosuganosora/character/",
+      "scope": "tên, mô tả, chiều cao, ngày sinh và quan hệ nhân vật"
+    },
+    {
+      "label": "Trang staff/cast chính thức",
+      "url": "https://king-cr.jp/special/yosuganosora/staff/",
+      "scope": "tên tiếng Nhật và danh sách nhân vật/diễn viên"
+    },
+    {
+      "label": "Tóm tắt nhân vật tham khảo",
+      "url": "https://zh.wikipedia.org/wiki/%E7%BC%98%E4%B9%8B%E7%A9%BA",
+      "scope": "năm học và chênh lệch tuổi được dùng làm dữ liệu suy luận"
+    }
+  ],
   "speaker_map": {},
   "characters": {
     "haruka": {
-      "display_name": "Haruka Kasuga",
+      "display_name": "Haruka Kasugano",
+      "native_name": "春日野 悠",
+      "aliases": ["Haruka", "悠"],
       "age": 16,
+      "age_confidence": "inferred_high_school_student",
       "gender": "male",
+      "gender_confidence": "profile",
       "role": "student",
       "default_self": "tớ"
     },
     "sora": {
-      "display_name": "Sora Kasuga",
+      "display_name": "Sora Kasugano",
+      "native_name": "春日野 穹",
+      "aliases": ["Sora", "穹"],
       "age": 16,
+      "age_confidence": "inferred_high_school_student",
       "gender": "female",
-      "role": "student",
-      "default_self": "tớ"
-    },
-    "kazuha": {
-      "display_name": "Kazuha Migiwa",
-      "age": 16,
-      "gender": "female",
+      "gender_confidence": "profile",
       "role": "student",
       "default_self": "tớ"
     },
     "akira": {
       "display_name": "Akira Amatsume",
+      "native_name": "天女目 瑛",
+      "aliases": ["Akira", "瑛"],
       "age": 16,
+      "age_confidence": "inferred_classmate",
       "gender": "female",
+      "gender_confidence": "profile",
       "role": "student",
       "default_self": "tớ"
     },
-    "kuranaka": {
-      "display_name": "Kuranaka-san",
-      "age": 35,
+    "nao": {
+      "display_name": "Nao Yorihime",
+      "native_name": "依媛 奈緒",
+      "aliases": ["Nao", "奈緒"],
+      "age": 17,
+      "age_confidence": "inferred_one_year_older",
       "gender": "female",
-      "role": "teacher",
-      "default_self": "cô"
+      "gender_confidence": "profile",
+      "role": "older_neighbor_student",
+      "default_self": "chị"
+    },
+    "kazuha": {
+      "display_name": "Kazuha Migiwa",
+      "native_name": "渚 一葉",
+      "aliases": ["Kazuha", "一葉"],
+      "age": 16,
+      "age_confidence": "inferred_classmate",
+      "gender": "female",
+      "gender_confidence": "profile",
+      "role": "student",
+      "default_self": "tớ"
+    },
+    "kozue": {
+      "display_name": "Kozue Kuranaga",
+      "native_name": "倉永 梢",
+      "aliases": ["Kozue", "Class Representative", "委員長"],
+      "age": 16,
+      "age_confidence": "inferred_class_representative",
+      "gender": "female",
+      "gender_confidence": "profile",
+      "role": "class_representative",
+      "default_self": "tớ"
+    },
+    "ryouhei": {
+      "display_name": "Ryouhei Nakazato",
+      "native_name": "中里 亮平",
+      "aliases": ["Ryouhei", "亮平"],
+      "age": 17,
+      "age_confidence": "inferred_repeating_student",
+      "gender": "male",
+      "gender_confidence": "profile",
+      "role": "student_friend",
+      "default_self": "anh"
     },
     "motoka": {
       "display_name": "Motoka Nogisaka",
-      "age": 16,
+      "native_name": "乃木坂 初佳",
+      "aliases": ["Motoka", "初佳"],
+      "age": null,
+      "age_band": "adult",
+      "age_confidence": "inferred_junior_college_graduate",
       "gender": "female",
-      "role": "student",
+      "gender_confidence": "profile",
+      "role": "maid",
       "default_self": "tôi"
+    },
+    "yahiro": {
+      "display_name": "Yahiro Ifukube",
+      "native_name": "伊福部 やひろ",
+      "aliases": ["Yahiro", "やひろ"],
+      "age": null,
+      "age_band": "adult",
+      "age_confidence": "inferred_adult_guardian",
+      "gender": "female",
+      "gender_confidence": "profile",
+      "role": "adult_guardian",
+      "default_self": "chị"
     }
   },
   "relations": {
     "haruka->sora": {
-      "relation": "siblings",
+      "relation": "twin_siblings",
       "self": "anh",
       "other": "em",
       "confidence": "profile"
     },
     "sora->haruka": {
-      "relation": "siblings",
+      "relation": "twin_siblings",
       "self": "em",
       "other": "anh",
       "confidence": "profile"
     },
-    "haruka->kuranaka": {
-      "relation": "student_teacher",
+    "haruka->nao": {
+      "relation": "younger_to_older_neighbor",
       "self": "em",
-      "other": "cô",
+      "other": "chị",
       "confidence": "profile"
     },
-    "sora->kuranaka": {
-      "relation": "student_teacher",
-      "self": "em",
-      "other": "cô",
-      "confidence": "profile"
-    },
-    "kuranaka->haruka": {
-      "relation": "teacher_student",
-      "self": "cô",
-      "other": "cháu",
-      "confidence": "profile"
-    },
-    "kuranaka->sora": {
-      "relation": "teacher_student",
-      "self": "cô",
-      "other": "cháu",
+    "nao->haruka": {
+      "relation": "older_neighbor_to_younger",
+      "self": "chị",
+      "other": "em",
       "confidence": "profile"
     },
     "haruka->akira": {
@@ -94,6 +159,66 @@
       "relation": "same_age_friendly",
       "self": "tớ",
       "other": "cậu",
+      "confidence": "profile"
+    },
+    "haruka->kazuha": {
+      "relation": "same_age_classmates",
+      "self": "tớ",
+      "other": "cậu",
+      "confidence": "profile"
+    },
+    "kazuha->haruka": {
+      "relation": "same_age_classmates",
+      "self": "tớ",
+      "other": "cậu",
+      "confidence": "profile"
+    },
+    "haruka->kozue": {
+      "relation": "same_age_classmates",
+      "self": "tớ",
+      "other": "cậu",
+      "confidence": "profile"
+    },
+    "kozue->haruka": {
+      "relation": "same_age_classmates",
+      "self": "tớ",
+      "other": "cậu",
+      "confidence": "profile"
+    },
+    "haruka->ryouhei": {
+      "relation": "younger_to_older_friend",
+      "self": "em",
+      "other": "anh",
+      "confidence": "profile"
+    },
+    "ryouhei->haruka": {
+      "relation": "older_to_younger_friend",
+      "self": "anh",
+      "other": "em",
+      "confidence": "profile"
+    },
+    "yahiro->akira": {
+      "relation": "adult_guardian_to_child",
+      "self": "chị",
+      "other": "em",
+      "confidence": "profile"
+    },
+    "akira->yahiro": {
+      "relation": "child_to_adult_guardian",
+      "self": "em",
+      "other": "chị",
+      "confidence": "profile"
+    },
+    "motoka->yahiro": {
+      "relation": "adult_friends",
+      "self": "tôi",
+      "other": "chị",
+      "confidence": "profile"
+    },
+    "yahiro->motoka": {
+      "relation": "adult_friends",
+      "self": "tôi",
+      "other": "cô",
       "confidence": "profile"
     }
   },
