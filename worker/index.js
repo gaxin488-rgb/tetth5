@@ -21,6 +21,10 @@ export default {
 async function handleApi(request, env, ctx, url) {
   const method = request.method.toUpperCase();
   if (url.pathname === '/api/movies' && method === 'GET') return listMovies(env, url);
+  const characterMappingMatch = url.pathname.match(/^\/api\/movies\/([^/]+)\/character-mapping$/);
+  if (characterMappingMatch && method === 'GET') {
+    return getCharacterMapping(env, decodeURIComponent(characterMappingMatch[1]), url);
+  }
   const subtitleMatch = url.pathname.match(/^\/api\/movies\/([^/]+)\/subtitles$/);
   if (subtitleMatch && method === 'GET') return listSubtitles(env, decodeURIComponent(subtitleMatch[1]), url);
   if (url.pathname.startsWith('/api/movies/') && method === 'GET') return getMovie(env, decodeURIComponent(url.pathname.slice('/api/movies/'.length)));
@@ -80,16 +84,41 @@ async function listMovies(env, url) {
 async function getMovie(env, slug) {
   if (!env.DB) {
     const data = await fallbackMovies(env); const movie = data.find(m => m.slug === slug);
-    return movie ? json(movie) : json({ error: 'movie_not_found' }, 404);
+    return movie ? json({ ...movie, character_mapping_url: characterMappingUrl(slug) }) : json({ error: 'movie_not_found' }, 404);
   }
   const movie = await env.DB.prepare(`SELECT m.*, (SELECT GROUP_CONCAT(g.name, '||') FROM movie_genres mg JOIN genres g ON g.id=mg.genre_id WHERE mg.movie_id=m.id) AS genres FROM movies m WHERE m.slug=? AND m.status='published'`).bind(slug).first();
   if (!movie) return json({ error: 'movie_not_found' }, 404);
   const episodes = await env.DB.prepare(`SELECT id, season_number, episode_number, title, duration_minutes, video_key, video_url FROM episodes WHERE movie_id=? AND status='published' ORDER BY season_number, episode_number`).bind(movie.id).all();
-  return json({ ...movie, episodes: episodes.results || [] });
+  return json({ ...movie, character_mapping_url: characterMappingUrl(slug), episodes: episodes.results || [] });
+}
+
+async function getCharacterMapping(env, slug, url) {
+  if (!env.ASSETS) return json({ error: 'character_mapping_unavailable' }, 503);
+  const assetPath = `/data/character-mappings/${encodeURIComponent(slug)}.json`;
+  const response = await env.ASSETS.fetch(new Request(`https://assets.local${assetPath}`));
+  if (!response.ok || !String(response.headers.get('content-type') || '').includes('application/json')) {
+    return json({ error: 'character_mapping_not_found' }, 404);
+  }
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    return json({ error: 'character_mapping_invalid' }, 502);
+  }
+  const episodeNumber = Number(url.searchParams.get('episode') || 0);
+  const episodeKey = episodeNumber > 0 ? String(episodeNumber).padStart(2, '0') : '';
+  const selectedEpisode = episodeKey ? (payload.episodes || {})[episodeKey] : null;
+  const { episodes: _episodes, ...base } = payload;
+  return json({
+    ...base,
+    episode: selectedEpisode || null,
+    requested_episode: episodeNumber || null,
+    source: 'assets'
+  }, 200, { 'cache-control': 'public, max-age=60' });
 }
 
 async function listSubtitles(env, slug, url) {
-  if (!env.DB) return json({ subtitles: [], source: 'sample' }, 200, { 'cache-control': 'public, max-age=60' });
+  if (!env.DB) return json({ subtitles: [], character_mapping_url: characterMappingUrl(slug), source: 'sample' }, 200, { 'cache-control': 'public, max-age=60' });
   const episodeNumber = Number(url.searchParams.get('episode') || 0);
   const params = [slug];
   const episodeFilter = episodeNumber > 0
@@ -106,7 +135,7 @@ async function listSubtitles(env, slug, url) {
     format: 'vtt',
     url: mediaUrl(row.r2_key)
   }));
-  return json({ subtitles, source: 'd1' }, 200, { 'cache-control': 'public, max-age=30' });
+  return json({ subtitles, character_mapping_url: characterMappingUrl(slug), source: 'd1' }, 200, { 'cache-control': 'public, max-age=30' });
 }
 
 async function recordView(request, env, ctx) {
@@ -278,6 +307,10 @@ async function serveMedia(request, env, rawKey) {
 
 function mediaUrl(key) {
   return `/media/${String(key || '').split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function characterMappingUrl(slug) {
+  return `/api/movies/${encodeURIComponent(String(slug || ''))}/character-mapping`;
 }
 
 function normalizeMovie(b) {

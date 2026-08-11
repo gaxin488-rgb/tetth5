@@ -150,6 +150,18 @@
       "role": "parent",
       "default_self": "cô"
     },
+    "nao_father": {
+      "display_name": "Cha của Nao (hồi tưởng)",
+      "native_name": "奈緒の父",
+      "aliases": ["Nao's father", "奈緒の父"],
+      "age": null,
+      "age_band": "adult",
+      "age_confidence": "inferred_parent",
+      "gender": "male",
+      "gender_confidence": "context_voice",
+      "role": "parent",
+      "default_self": "tôi"
+    },
     "teacher": {
       "display_name": "Giáo viên",
       "native_name": "教師",
