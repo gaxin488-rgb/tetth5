@@ -2,3 +2,4 @@
 # Use Python 3.13 or lower; inaSpeechSegmenter does not support Python 3.14+.
 whisperx
 inaSpeechSegmenter
+argostranslate==1.11.0

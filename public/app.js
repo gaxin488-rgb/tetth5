@@ -9,6 +9,7 @@
   let movies = [];
   let toastTimer;
   const subtitleCache = new Map();
+  const movieDetailCache = new Map();
   const IS_FILE_PREVIEW = location.protocol === 'file:';
   const assetUrl = value => {
     const url = String(value || '');
@@ -24,6 +25,21 @@
   const slugify = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/đ/g,'d').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const allGenres = () => [...new Set(movies.flatMap(m => Array.isArray(m.genres) ? m.genres : String(m.genres || '').split('||')))].filter(Boolean);
   const meta = m => `${m.release_year || '—'} · ${m.type === 'series' ? `${m.episode_count || '?'} tập` : `${m.duration_minutes || '?'} phút`}`;
+  const watchHref = m => `#watch/${encodeURIComponent(m.slug)}${m.type === 'series' ? '/1' : ''}`;
+
+  function normalizeMovieData(movie) {
+    return {
+      ...movie,
+      poster_url: assetUrl(movie.poster_url),
+      backdrop_url: assetUrl(movie.backdrop_url),
+      genres: Array.isArray(movie.genres) ? movie.genres : String(movie.genres || '').split('||').filter(Boolean),
+      tags: Array.isArray(movie.tags) ? movie.tags : String(movie.tags || '').split('||').filter(Boolean),
+      episodes: Array.isArray(movie.episodes) ? movie.episodes.map(episode => ({
+        ...episode,
+        video_url: assetUrl(episode.video_url)
+      })) : []
+    };
+  }
 
   function notify(message) {
     clearTimeout(toastTimer); toast.textContent = message; toast.classList.add('show');
@@ -49,13 +65,7 @@
         console.warn('Đang dùng dữ liệu mẫu:', error.message);
       }
     }
-    movies = movies.map(m => ({
-      ...m,
-      poster_url: assetUrl(m.poster_url),
-      backdrop_url: assetUrl(m.backdrop_url),
-      genres: Array.isArray(m.genres) ? m.genres : String(m.genres || '').split('||').filter(Boolean),
-      tags: Array.isArray(m.tags) ? m.tags : String(m.tags || '').split('||').filter(Boolean)
-    }));
+    movies = movies.map(normalizeMovieData);
     if (!movies.length) throw new Error('Không có dữ liệu phim mẫu.');
   }
 
@@ -76,7 +86,7 @@
         <span class="quality">${esc(m.quality || 'HD')}</span>
         <span class="card-score">★ ${(7.6 + (Number(m.id || 1) % 18) / 10).toFixed(1)}</span>
         <button class="favorite-button ${isFavorite(m.slug) ? 'active' : ''}" data-favorite="${esc(m.slug)}" aria-label="Thêm ${esc(m.title)} vào danh sách">${isFavorite(m.slug) ? '♥' : '♡'}</button>
-        <div class="card-overlay"><div class="overlay-copy"><small>${esc(m.genres.slice(0,2).join(' · '))}</small><a class="play-circle" href="#watch/${encodeURIComponent(m.slug)}" aria-label="Phát ${esc(m.title)}">▶</a></div></div>
+        <div class="card-overlay"><div class="overlay-copy"><small>${esc(m.genres.slice(0,2).join(' · '))}</small><a class="play-circle" href="${watchHref(m)}" aria-label="Phát ${esc(m.title)}">▶</a></div></div>
       </div>
       <h3><a href="#movie/${encodeURIComponent(m.slug)}">${esc(m.title)}</a></h3>
       <div class="card-meta"><span>${esc(m.release_year)}</span><span>•</span><span>${m.type === 'series' ? `${esc(m.episode_count || '?')} tập` : `${esc(m.duration_minutes || '?')} phút`}</span></div>
@@ -106,7 +116,7 @@
     app.innerHTML = `<section class="hero" style="background-image:url('${esc(featured.backdrop_url)}')">
       <div class="hero-noise" aria-hidden="true"></div><div class="hero-content"><span class="eyebrow"><i></i> CINEZERO PREMIERE</span><h1>${esc(featured.title)}</h1>
       <div class="meta"><span class="match">98% phù hợp</span><span>${esc(featured.release_year)}</span><span class="pill">${esc(featured.age_rating)}</span><span class="pill">${esc(featured.quality)}</span><span>${esc(featured.genres.join(' · '))}</span></div>
-      <p>${esc(featured.description)}</p><div class="hero-actions"><a class="button primary" href="#watch/${encodeURIComponent(featured.slug)}"><span class="button-icon">▶</span> Xem ngay</a><a class="button secondary" href="#movie/${encodeURIComponent(featured.slug)}">ⓘ Chi tiết</a></div>
+      <p>${esc(featured.description)}</p><div class="hero-actions"><a class="button primary" href="${watchHref(featured)}"><span class="button-icon">▶</span> Xem ngay</a><a class="button secondary" href="#movie/${encodeURIComponent(featured.slug)}">ⓘ Chi tiết</a></div>
       <div class="hero-stats"><div><b>06</b><span>phim chọn lọc</span></div><div><b>0đ</b><span>chi phí nền tảng</span></div><div><b>24/7</b><span>sẵn sàng online</span></div></div></div>
       <a class="scroll-cue" href="#featuredRows" aria-label="Cuộn xuống nội dung">Khám phá <span>↓</span></a>
     </section><div class="content-wrap home-content" id="featuredRows">
@@ -137,7 +147,7 @@
     app.innerHTML = `<section class="detail-hero" style="background-image:url('${esc(m.backdrop_url)}')"><div class="detail-layout">
       <img class="detail-poster" src="${esc(m.poster_url)}" alt="Poster ${esc(m.title)}"><div class="detail-info"><span class="eyebrow">${m.type === 'series' ? 'Phim bộ' : 'Phim lẻ'}</span><h1>${esc(m.title)}</h1><div class="original">${esc(m.original_title || '')}</div>
       <div class="meta"><span>${esc(m.release_year)}</span><span class="pill">${esc(m.age_rating)}</span><span class="pill">${esc(m.quality)}</span><span>${esc(meta(m))}</span></div>
-      <p class="description">${esc(m.description)}</p><div class="hero-actions"><a class="button primary" href="#watch/${encodeURIComponent(m.slug)}">▶ Xem ngay</a><button class="button secondary" id="detailFavorite">${isFavorite(m.slug)?'♥ Đã lưu':'♡ Thêm vào danh sách'}</button></div></div></div></section>
+      <p class="description">${esc(m.description)}</p><div class="hero-actions"><a class="button primary" href="${watchHref(m)}">▶ Xem ngay</a><button class="button secondary" id="detailFavorite">${isFavorite(m.slug)?'♥ Đã lưu':'♡ Thêm vào danh sách'}</button></div></div></div></section>
       <section class="detail-body"><div class="section-head"><div><h2>Thông tin phim</h2><p>Nội dung mẫu có thể chỉnh trong D1 hoặc file JSON.</p></div></div><div class="facts">
       <div class="fact"><span>Thể loại</span>${esc(m.genres.join(', '))}</div>${m.tags?.length ? `<div class="fact"><span>Từ khóa</span>${esc(m.tags.join(', '))}</div>` : ''}<div class="fact"><span>Quốc gia</span>${esc(m.country || 'Đang cập nhật')}</div><div class="fact"><span>Thời lượng</span>${esc(meta(m))}</div><div class="fact"><span>Trạng thái</span>${m.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</div></div></section>`;
     document.querySelector('#detailFavorite').addEventListener('click', e => { toggleFavorite(m.slug); e.currentTarget.textContent = isFavorite(m.slug)?'♥ Đã lưu':'♡ Thêm vào danh sách'; });
@@ -190,16 +200,42 @@
     }
   }
 
-  async function attachSubtitles(video, slug) {
+  async function loadMovieDetails(slug) {
+    if (movieDetailCache.has(slug)) return movieDetailCache.get(slug);
+    const current = movies.find(item => item.slug === slug);
+    if (IS_FILE_PREVIEW) {
+      const local = normalizeMovieData(current || {});
+      movieDetailCache.set(slug, local);
+      return local;
+    }
+    try {
+      const response = await fetch(`/api/movies/${encodeURIComponent(slug)}`, { headers: { accept: 'application/json' } });
+      if (!response.ok) throw new Error(`API ${response.status}`);
+      const movie = normalizeMovieData(await response.json());
+      movieDetailCache.set(slug, movie);
+      const index = movies.findIndex(item => item.slug === slug);
+      if (index >= 0) movies[index] = { ...movies[index], ...movie };
+      return movie;
+    } catch (error) {
+      console.warn('Không tải được danh sách tập:', error.message);
+      const fallback = normalizeMovieData(current || {});
+      movieDetailCache.set(slug, fallback);
+      return fallback;
+    }
+  }
+
+  async function attachSubtitles(video, slug, episodeNumber = 0) {
     if (IS_FILE_PREVIEW || !video?.isConnected) return;
     try {
-      if (!subtitleCache.has(slug)) {
-        const response = await fetch(`/api/movies/${encodeURIComponent(slug)}/subtitles`, { headers: { accept: 'application/json' } });
+      const cacheKey = `${slug}:${episodeNumber || 0}`;
+      if (!subtitleCache.has(cacheKey)) {
+        const query = episodeNumber > 0 ? `?episode=${encodeURIComponent(episodeNumber)}` : '';
+        const response = await fetch(`/api/movies/${encodeURIComponent(slug)}/subtitles${query}`, { headers: { accept: 'application/json' } });
         if (!response.ok) throw new Error(`API ${response.status}`);
         const payload = await response.json();
-        subtitleCache.set(slug, Array.isArray(payload.subtitles) ? payload.subtitles : []);
+        subtitleCache.set(cacheKey, Array.isArray(payload.subtitles) ? payload.subtitles : []);
       }
-      const tracks = subtitleCache.get(slug) || [];
+      const tracks = subtitleCache.get(cacheKey) || [];
       const status = document.querySelector('#subtitleStatus');
       if (!tracks.length || !video.isConnected) return;
       const hasDefault = tracks.some(track => Boolean(track.is_default));
@@ -228,16 +264,33 @@
     }
   }
 
-  function watch(slug) {
-    const m = movies.find(item => item.slug === slug);
-    if (!m) return notFound();
-    const source = m.video_key && !IS_FILE_PREVIEW ? `/media/${m.video_key.split('/').map(encodeURIComponent).join('/')}` : m.video_url;
-    const progress = store.get('cinezero_progress', {})[slug] || 0;
-    app.innerHTML = `<section class="watch-page"><div class="player-shell"><div class="player-wrap">${source ? `<video id="videoPlayer" controls playsinline preload="metadata" poster="${esc(m.backdrop_url)}"><source src="${esc(source)}" type="video/mp4">Trình duyệt không hỗ trợ video HTML5.</video><div class="subtitle-overlay" id="subtitleOverlay" aria-live="polite"></div>` : `<div class="player-empty"><div><h2>Chưa có video cho phim này</h2><p>Upload video lên R2 rồi điền <strong>video_key</strong> trong D1. Website không cần chạy trên máy cá nhân.</p><code>movies/${esc(m.slug)}/movie-720p.mp4</code></div></div>`}</div>
-      <div class="watch-info"><div><span class="eyebrow">Đang xem</span><h1>${esc(m.title)}</h1><div class="meta"><span>${esc(m.release_year)}</span><span>${esc(m.quality)}</span><span>${esc(m.genres.join(' · '))}</span></div></div><div class="watch-actions"><a class="button secondary" href="#movie/${encodeURIComponent(m.slug)}">ⓘ Chi tiết</a><button class="button secondary" id="watchFavorite">${isFavorite(m.slug)?'♥ Đã lưu':'♡ Lưu phim'}</button></div></div>
-      ${source ? '<p class="subtitle-status" id="subtitleStatus" hidden></p>' : ''}
-      ${source ? `<div class="progress-card"><div class="section-head"><div><strong>Tiến độ xem</strong><p id="progressText">Đang đồng bộ trên thiết bị này</p></div></div><div class="progress-track"><div class="progress-value" id="progressValue"></div></div></div>` : ''}</div></section>`;
-    document.querySelector('#watchFavorite').addEventListener('click', e => { toggleFavorite(m.slug); e.currentTarget.textContent = isFavorite(m.slug)?'♥ Đã lưu':'♡ Lưu phim'; });
+  async function watch(slug, requestedEpisode = 0) {
+    const m = await loadMovieDetails(slug);
+    if (!m || !m.slug) return notFound();
+    const episodes = (Array.isArray(m.episodes) ? m.episodes : [])
+      .filter(episode => episode.status === undefined || episode.status === 'published')
+      .sort((a, b) => Number(a.episode_number || 0) - Number(b.episode_number || 0));
+    const selectedEpisode = episodes.length
+      ? episodes.find(episode => Number(episode.episode_number) === Number(requestedEpisode)) || episodes[0]
+      : null;
+    const episodeNumber = selectedEpisode ? Number(selectedEpisode.episode_number) : 0;
+    const episodeLabel = selectedEpisode ? `Tập ${String(episodeNumber).padStart(2, '0')}` : '';
+    const sourceKey = selectedEpisode?.video_key || m.video_key;
+    const sourceUrl = selectedEpisode?.video_url || m.video_url;
+    const source = sourceKey && !IS_FILE_PREVIEW ? `/media/${sourceKey.split('/').map(encodeURIComponent).join('/')}` : sourceUrl;
+    const watchKey = `${slug}:${episodeNumber || 0}`;
+    const progressMap = store.get('cinezero_progress', {});
+    const progress = progressMap[watchKey] ?? progressMap[slug] ?? 0;
+    const episodePicker = episodes.length > 1
+      ? `<div class='episode-picker'><label for='episodeSelect'>Chọn tập</label><select id='episodeSelect'>${episodes.map(episode => `<option value='${Number(episode.episode_number)}' ${Number(episode.episode_number) === episodeNumber ? 'selected' : ''}>${esc(episode.title || `Tập ${String(episode.episode_number).padStart(2, '0')}`)}</option>`).join('')}</select></div>`
+      : episodes.length === 1 ? `<span class='episode-count'>${esc(episodeLabel)}</span>` : '';
+    app.innerHTML = `<section class='watch-page'><div class='player-shell'><div class='player-wrap'>${source ? `<video id='videoPlayer' controls playsinline preload='metadata' poster='${esc(m.backdrop_url)}'><source src='${esc(source)}' type='video/mp4'>Trình duyệt không hỗ trợ video HTML5.</video><div class='subtitle-overlay' id='subtitleOverlay' aria-live='polite'></div>` : `<div class='player-empty'><div><h2>Chưa có video cho ${esc(episodeLabel || 'phim này')}</h2><p>Hãy upload bản MP4 lên R2 và cập nhật <strong>video_key</strong> của tập trong D1.</p><code>${esc(sourceKey || `episodes/${m.slug}/episode-${String(episodeNumber || 1).padStart(2, '0')}.mp4`)}</code></div></div>`}</div>
+      <div class='watch-info'><div><span class='eyebrow'>Đang xem</span><h1>${esc(m.title)}${episodeLabel ? ` · ${esc(episodeLabel)}` : ''}</h1><div class='meta'><span>${esc(m.release_year)}</span><span>${esc(m.quality)}</span><span>${esc(m.genres.join(' · '))}</span></div></div><div class='watch-actions'><a class='button secondary' href='#movie/${encodeURIComponent(m.slug)}'>ⓘ Chi tiết</a><button class='button secondary' id='watchFavorite'>${isFavorite(m.slug) ? '♥ Đã lưu' : '♡ Lưu phim'}</button></div></div>
+      ${episodePicker ? `<div class='episode-toolbar'>${episodePicker}</div>` : ''}
+      ${source ? `<p class='subtitle-status' id='subtitleStatus' hidden></p>` : ''}
+      ${source ? `<div class='progress-card'><div class='section-head'><div><strong>Tiến độ xem ${episodeLabel ? `· ${esc(episodeLabel)}` : ''}</strong><p id='progressText'>Đang đồng bộ trên thiết bị này</p></div></div><div class='progress-track'><div class='progress-value' id='progressValue'></div></div></div>` : ''}</div></section>`;
+    document.querySelector('#watchFavorite').addEventListener('click', e => { toggleFavorite(m.slug); e.currentTarget.textContent = isFavorite(m.slug) ? '♥ Đã lưu' : '♡ Lưu phim'; });
+    document.querySelector('#episodeSelect')?.addEventListener('change', event => { location.hash = `watch/${encodeURIComponent(slug)}/${event.currentTarget.value}`; });
     const video = document.querySelector('#videoPlayer');
     if (video) {
       const progressValue = document.querySelector('#progressValue');
@@ -246,12 +299,12 @@
       video.addEventListener('timeupdate', () => {
         if (!video.duration) return;
         progressValue.style.width = `${Math.min(100, video.currentTime / video.duration * 100)}%`;
-        progressText.textContent = `${Math.floor(video.currentTime/60)}:${String(Math.floor(video.currentTime%60)).padStart(2,'0')} / ${Math.floor(video.duration/60)}:${String(Math.floor(video.duration%60)).padStart(2,'0')}`;
+        progressText.textContent = `${Math.floor(video.currentTime / 60)}:${String(Math.floor(video.currentTime % 60)).padStart(2, '0')} / ${Math.floor(video.duration / 60)}:${String(Math.floor(video.duration % 60)).padStart(2, '0')}`;
       });
       let lastSaved = 0;
-      video.addEventListener('timeupdate', () => { if (video.currentTime - lastSaved > 5) { const p=store.get('cinezero_progress',{}); p[slug]=Math.floor(video.currentTime); store.set('cinezero_progress',p); lastSaved=video.currentTime; } });
-      video.addEventListener('play', () => { if (!IS_FILE_PREVIEW) fetch('/api/view', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug})}).catch(()=>{}); });
-      attachSubtitles(video, slug);
+      video.addEventListener('timeupdate', () => { if (video.currentTime - lastSaved > 5) { const p = store.get('cinezero_progress', {}); p[watchKey] = Math.floor(video.currentTime); store.set('cinezero_progress', p); lastSaved = video.currentTime; } });
+      video.addEventListener('play', () => { if (!IS_FILE_PREVIEW) fetch('/api/view', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug }) }).catch(() => {}); });
+      attachSubtitles(video, slug, episodeNumber);
     }
   }
 
@@ -277,9 +330,10 @@
 
   function route() {
     window.scrollTo(0,0); closePanels();
-    const hash = location.hash.slice(1) || 'home'; const [name, raw] = hash.split('/'); const value = decodeURIComponent(raw || '');
+    const hash = location.hash.slice(1) || 'home'; const [name, raw, rawEpisode] = hash.split('/'); const value = decodeURIComponent(raw || '');
+    const episode = Number(decodeURIComponent(rawEpisode || '')) || 0;
     document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === (name === 'browse' ? value : name)));
-    if (name === 'home') home(); else if (name === 'browse') browse(value || 'all'); else if (name === 'movie') detail(value); else if (name === 'watch') watch(value); else if (name === 'favorites') favorites(); else if (name === 'search') searchResults(value); else notFound();
+    if (name === 'home') home(); else if (name === 'browse') browse(value || 'all'); else if (name === 'movie') detail(value); else if (name === 'watch') watch(value, episode); else if (name === 'favorites') favorites(); else if (name === 'search') searchResults(value); else notFound();
   }
 
   function closePanels() { searchPanel.hidden = true; mobileMenu.hidden = true; document.querySelector('#menuToggle').setAttribute('aria-expanded','false'); }

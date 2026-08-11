@@ -22,7 +22,7 @@ async function handleApi(request, env, ctx, url) {
   const method = request.method.toUpperCase();
   if (url.pathname === '/api/movies' && method === 'GET') return listMovies(env, url);
   const subtitleMatch = url.pathname.match(/^\/api\/movies\/([^/]+)\/subtitles$/);
-  if (subtitleMatch && method === 'GET') return listSubtitles(env, decodeURIComponent(subtitleMatch[1]));
+  if (subtitleMatch && method === 'GET') return listSubtitles(env, decodeURIComponent(subtitleMatch[1]), url);
   if (url.pathname.startsWith('/api/movies/') && method === 'GET') return getMovie(env, decodeURIComponent(url.pathname.slice('/api/movies/'.length)));
   if (url.pathname === '/api/view' && method === 'POST') return recordView(request, env, ctx);
 
@@ -88,11 +88,18 @@ async function getMovie(env, slug) {
   return json({ ...movie, episodes: episodes.results || [] });
 }
 
-async function listSubtitles(env, slug) {
+async function listSubtitles(env, slug, url) {
   if (!env.DB) return json({ subtitles: [], source: 'sample' }, 200, { 'cache-control': 'public, max-age=60' });
+  const episodeNumber = Number(url.searchParams.get('episode') || 0);
+  const params = [slug];
+  const episodeFilter = episodeNumber > 0
+    ? ` AND (s.episode_id IS NULL OR s.episode_id=(SELECT e.id FROM episodes e WHERE e.movie_id=m.id AND e.season_number=1 AND e.episode_number=?))`
+    : '';
+  if (episodeNumber > 0) params.push(episodeNumber);
   const result = await env.DB.prepare(`SELECT s.id,s.language_code,s.label,s.r2_key,s.episode_id
     FROM subtitles s JOIN movies m ON m.id=s.movie_id
-    WHERE m.slug=? AND m.status='published' ORDER BY s.episode_id IS NOT NULL, s.language_code, s.id`).bind(slug).all();
+    WHERE m.slug=? AND m.status='published'${episodeFilter}
+    ORDER BY s.episode_id IS NOT NULL, s.language_code, s.id`).bind(...params).all();
   const subtitles = (result.results || []).map(row => ({
     ...row,
     kind: 'subtitles',
