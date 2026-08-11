@@ -28,3 +28,16 @@ INSERT OR IGNORE INTO genres(name,slug) VALUES('Hành động','hanh-dong');
 INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movies m,genres g WHERE m.slug='nguoi-giu-khu-rung' AND g.name='Hành động';
 INSERT OR IGNORE INTO genres(name,slug) VALUES('Phiêu lưu','phieu-luu');
 INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movies m,genres g WHERE m.slug='nguoi-giu-khu-rung' AND g.name='Phiêu lưu';
+
+INSERT OR IGNORE INTO movies(slug,title,original_title,type,description,release_year,duration_minutes,status,quality,age_rating,country,tags,poster_url,backdrop_url,video_key,video_url,featured) VALUES('yosuga-no-sora','Yosuga no Sora','Yosuga no Sora: In Solitude When We Are Least Alone (ヨスガノソラ)','series','Sau khi cha mẹ qua đời trong một vụ tai nạn, Haruka Kasugano và cô em gái sinh đôi Sora mất đi chỗ dựa duy nhất. Hai anh em quyết định rời thành phố và chuyển đến một thị trấn vùng quê, nơi họ từng trải qua những mùa hè bên người ông quá cố. Ban đầu, mọi thứ nơi đây vẫn quen thuộc và yên bình. Tuy nhiên, Haruka dần nhớ lại những ký ức từ thời thơ ấu. Những ký ức tưởng như đã bị lãng quên ấy bắt đầu làm thay đổi cuộc sống của hai anh em.',2010,25,'published','HD','T18','Nhật Bản','Loạn luân||Vũ trụ thay thế||Sinh đôi||Dàn nhân vật||Harem','/assets/posters/yosuga-no-sora.svg','/assets/backdrops/yosuga-no-sora.svg',NULL,'',0);
+INSERT OR IGNORE INTO genres(name,slug) VALUES('Drama','drama');
+INSERT OR IGNORE INTO genres(name,slug) VALUES('Ecchi','ecchi');
+INSERT OR IGNORE INTO genres(name,slug) VALUES('Lãng mạn','lang-man');
+INSERT OR IGNORE INTO genres(name,slug) VALUES('Harem','harem');
+INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movies m,genres g WHERE m.slug='yosuga-no-sora' AND g.name='Drama';
+INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movies m,genres g WHERE m.slug='yosuga-no-sora' AND g.name='Ecchi';
+INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movies m,genres g WHERE m.slug='yosuga-no-sora' AND g.name='Lãng mạn';
+INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movies m,genres g WHERE m.slug='yosuga-no-sora' AND g.name='Harem';
+WITH RECURSIVE episode_numbers(number) AS (SELECT 1 UNION ALL SELECT number + 1 FROM episode_numbers WHERE number < 12)
+INSERT OR IGNORE INTO episodes(movie_id,season_number,episode_number,title,duration_minutes,status,video_key,video_url)
+SELECT m.id,1,episode_numbers.number,printf('Tập %02d',episode_numbers.number),25,'published',NULL,'' FROM movies m CROSS JOIN episode_numbers WHERE m.slug='yosuga-no-sora';

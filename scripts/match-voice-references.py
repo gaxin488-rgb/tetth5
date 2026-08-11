@@ -42,6 +42,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--report-output", required=True, help="Output JSON report")
     parser.add_argument("--hf-token", default=os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN"))
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
+    parser.add_argument("--no-embeddings", action="store_true", help="Skip speaker embedding extraction for a faster visual/manual review run")
+    parser.add_argument("--num-speakers", type=int, default=None, help="Force the expected number of distinct speakers")
+    parser.add_argument("--min-speakers", type=int, default=None, help="Lower bound for automatic speaker count")
+    parser.add_argument("--max-speakers", type=int, default=None, help="Upper bound for automatic speaker count")
     parser.add_argument("--voice-match-threshold", type=float, default=0.55)
     parser.add_argument("--voice-match-margin", type=float, default=0.05)
     return parser.parse_args()
@@ -81,7 +85,21 @@ def main() -> int:
             last[0] = step
             print(f"DIARIZATION_PROGRESS={step}%")
 
-    diarized_df, speaker_embeddings = pipeline(audio, return_embeddings=True, progress_callback=progress)
+    if args.num_speakers is not None and (args.min_speakers is not None or args.max_speakers is not None):
+        raise RuntimeError("Chỉ dùng một trong --num-speakers hoặc --min-speakers/--max-speakers.")
+    diarize_kwargs = {"return_embeddings": not args.no_embeddings, "progress_callback": progress}
+    if args.num_speakers is not None:
+        diarize_kwargs["num_speakers"] = args.num_speakers
+    else:
+        if args.min_speakers is not None:
+            diarize_kwargs["min_speakers"] = args.min_speakers
+        if args.max_speakers is not None:
+            diarize_kwargs["max_speakers"] = args.max_speakers
+    diarize_output = pipeline(audio, **diarize_kwargs)
+    if isinstance(diarize_output, tuple):
+        diarized_df, speaker_embeddings = diarize_output
+    else:
+        diarized_df, speaker_embeddings = diarize_output, {}
     assigned = whisperx.assign_word_speakers(
         diarized_df,
         {"segments": segments},
@@ -115,6 +133,10 @@ def main() -> int:
     output_report["diarization"] = {
         "enabled": True,
         "model": "pyannote/speaker-diarization-community-1",
+        "return_embeddings": not args.no_embeddings,
+        "num_speakers": args.num_speakers,
+        "min_speakers": args.min_speakers,
+        "max_speakers": args.max_speakers,
         "speaker_embeddings": speaker_embeddings or {},
     }
     output_report["voice_matching"] = {

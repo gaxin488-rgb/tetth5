@@ -53,7 +53,8 @@
       ...m,
       poster_url: assetUrl(m.poster_url),
       backdrop_url: assetUrl(m.backdrop_url),
-      genres: Array.isArray(m.genres) ? m.genres : String(m.genres || '').split('||').filter(Boolean)
+      genres: Array.isArray(m.genres) ? m.genres : String(m.genres || '').split('||').filter(Boolean),
+      tags: Array.isArray(m.tags) ? m.tags : String(m.tags || '').split('||').filter(Boolean)
     }));
     if (!movies.length) throw new Error('Không có dữ liệu phim mẫu.');
   }
@@ -138,7 +139,7 @@
       <div class="meta"><span>${esc(m.release_year)}</span><span class="pill">${esc(m.age_rating)}</span><span class="pill">${esc(m.quality)}</span><span>${esc(meta(m))}</span></div>
       <p class="description">${esc(m.description)}</p><div class="hero-actions"><a class="button primary" href="#watch/${encodeURIComponent(m.slug)}">▶ Xem ngay</a><button class="button secondary" id="detailFavorite">${isFavorite(m.slug)?'♥ Đã lưu':'♡ Thêm vào danh sách'}</button></div></div></div></section>
       <section class="detail-body"><div class="section-head"><div><h2>Thông tin phim</h2><p>Nội dung mẫu có thể chỉnh trong D1 hoặc file JSON.</p></div></div><div class="facts">
-      <div class="fact"><span>Thể loại</span>${esc(m.genres.join(', '))}</div><div class="fact"><span>Quốc gia</span>${esc(m.country || 'Đang cập nhật')}</div><div class="fact"><span>Thời lượng</span>${esc(meta(m))}</div><div class="fact"><span>Trạng thái</span>${m.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</div></div></section>`;
+      <div class="fact"><span>Thể loại</span>${esc(m.genres.join(', '))}</div>${m.tags?.length ? `<div class="fact"><span>Từ khóa</span>${esc(m.tags.join(', '))}</div>` : ''}<div class="fact"><span>Quốc gia</span>${esc(m.country || 'Đang cập nhật')}</div><div class="fact"><span>Thời lượng</span>${esc(meta(m))}</div><div class="fact"><span>Trạng thái</span>${m.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}</div></div></section>`;
     document.querySelector('#detailFavorite').addEventListener('click', e => { toggleFavorite(m.slug); e.currentTarget.textContent = isFavorite(m.slug)?'♥ Đã lưu':'♡ Thêm vào danh sách'; });
   }
 

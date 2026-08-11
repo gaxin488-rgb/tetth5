@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS movies (
   quality TEXT DEFAULT 'HD',
   age_rating TEXT DEFAULT 'T13',
   country TEXT DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '',
   poster_url TEXT NOT NULL,
   backdrop_url TEXT NOT NULL,
   video_key TEXT,

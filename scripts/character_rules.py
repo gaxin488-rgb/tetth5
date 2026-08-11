@@ -170,6 +170,29 @@ def _find_listener(profile: dict[str, Any], item: dict[str, Any], character_id: 
     return None
 
 
+def _find_segment_character_override(profile: dict[str, Any], item: dict[str, Any]) -> dict[str, Any] | None:
+    """Return a reviewed time-range character override, if one matches."""
+    raw_speaker = str(item.get("speaker") or "").strip()
+    try:
+        start = float(item.get("start") or 0.0)
+    except (TypeError, ValueError):
+        start = 0.0
+    for override in profile.get("segment_overrides") or []:
+        if not isinstance(override, dict) or not override.get("character_id"):
+            continue
+        expected_speaker = str(override.get("speaker") or "").strip()
+        if expected_speaker and expected_speaker != raw_speaker:
+            continue
+        try:
+            override_start = float(override.get("start", 0.0))
+            override_end = float(override.get("end", 10**12))
+        except (TypeError, ValueError):
+            continue
+        if override_start <= start < override_end:
+            return override
+    return None
+
+
 def _heuristic_relation(speaker: dict[str, Any] | None, listener: dict[str, Any] | None) -> str:
     if not speaker or not listener:
         return "fallback"
@@ -265,7 +288,12 @@ def apply_character_rules(
     for item in segments:
         output = dict(item)
         raw_speaker = str(item.get("speaker") or "").strip()
-        character_id = speaker_map.get(raw_speaker)
+        segment_override = _find_segment_character_override(normalized, item)
+        character_id = (
+            str(segment_override.get("character_id")).strip()
+            if segment_override
+            else speaker_map.get(raw_speaker)
+        )
         character = character_map.get(character_id) if character_id else None
 
         if character:
@@ -280,7 +308,10 @@ def apply_character_rules(
             output["character_role"] = character.get("role")
             output["character_metadata_status"] = normalized.get("metadata_status", "profile")
             output["speaker_label"] = display_name
-            speaker_confidence = "profile"
+            speaker_confidence = "profile_override" if segment_override else "profile"
+            if segment_override:
+                output["character_match_source"] = "reviewed_segment_override"
+                output["character_match_evidence"] = segment_override.get("evidence")
         else:
             if raw_speaker not in anonymous_labels:
                 anonymous_labels[raw_speaker] = f"Người nói {len(anonymous_labels) + 1}"
@@ -311,7 +342,7 @@ def apply_character_rules(
         output["speaker_confidence"] = speaker_confidence
         output["pronouns"] = pronouns
         output["needs_review"] = []
-        if speaker_confidence != "profile":
+        if speaker_confidence not in {"profile", "profile_override"}:
             output["needs_review"].append("map_speaker_to_character")
         if not listener_id:
             output["needs_review"].append("set_listener_or_scene_target")

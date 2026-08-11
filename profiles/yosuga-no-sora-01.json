@@ -2,7 +2,7 @@
   "schema_version": 1,
   "title": "Yosuga no Sora - 01",
   "metadata_status": "review_required",
-  "notes": "Speaker_map phải được điền sau khi diarization tạo ra SPEAKER_00, SPEAKER_01... Tuổi là dữ liệu khởi tạo/suy luận và cần kiểm tra lại trước khi xuất bản.",
+  "notes": "Mapping đã được đối chiếu bằng khung hình của tập 01. Chỉ các cụm có hình + lời thoại đủ rõ mới được gán; cụm bị trộn vẫn để ẩn danh để tránh gắn sai nhân vật.",
   "reference_matching": {
     "profile": "profiles/references/yosuga-no-sora-01.references.json",
     "voice_method": "pyannote-speaker-embedding",
@@ -27,7 +27,72 @@
       "scope": "năm học và chênh lệch tuổi được dùng làm dữ liệu suy luận"
     }
   ],
-  "speaker_map": {},
+  "speaker_map": {
+    "SPEAKER_01": "haruka",
+    "SPEAKER_02": "teacher",
+    "SPEAKER_03": "kozue",
+    "SPEAKER_04": "haruka",
+    "SPEAKER_06": "kazuha",
+    "SPEAKER_07": "sora"
+  },
+  "speaker_map_evidence": {
+    "SPEAKER_01": {
+      "character_id": "haruka",
+      "confidence": "high",
+      "evidence": "Các mẫu 00:04:15, 00:10:36 và 00:18:30 đều cho thấy Haruka tóc bạc đang nói/đối thoại."
+    },
+    "SPEAKER_02": {
+      "character_id": "teacher",
+      "confidence": "user_confirmed",
+      "evidence": "Người dùng xác nhận nhãn Người nói 1 trong cảnh lớp học là giáo viên."
+    },
+    "SPEAKER_03": {
+      "character_id": "kozue",
+      "confidence": "high",
+      "evidence": "Các mẫu 00:15:12–00:15:57 nằm ở cảnh lớp học; người tóc đen tết hai bên hỏi thăm Haruka là Kozue."
+    },
+    "SPEAKER_04": {
+      "character_id": "haruka",
+      "confidence": "high",
+      "evidence": "Các mẫu 00:00:37–00:00:55 cho thấy Haruka tóc bạc là người nam đang nói trong toa tàu."
+    },
+    "SPEAKER_06": {
+      "character_id": "kazuha",
+      "confidence": "high",
+      "evidence": "Các cue còn lại ở 00:14:09 và 00:25:29; cảnh có Kazuha cùng Akira, câu cuối gọi Akira và Kasugano-kun nên khớp Kazuha. Đoạn omake Motoka được override riêng theo thời gian."
+    },
+    "SPEAKER_07": {
+      "character_id": "sora",
+      "confidence": "medium",
+      "evidence": "Các cue 00:00:56 và 00:06:02–00:06:08 khớp Sora; một cue cắt qua chuyển cảnh nên vẫn cần kiểm tra lại nếu xuất bản."
+    }
+  },
+  "segment_overrides": [
+    {
+      "start": 335.0,
+      "end": 339.8,
+      "speaker": "SPEAKER_05",
+      "character_id": "akira",
+      "confidence": "medium",
+      "evidence": "Khung hình tại 00:05:36 cho thấy Akira trong trang phục miko; cue liền kề có thể cắt qua tiếng người khác."
+    },
+    {
+      "start": 546.0,
+      "end": 586.0,
+      "speaker": "SPEAKER_05",
+      "character_id": "nao_mother",
+      "confidence": "medium",
+      "evidence": "Khung hình 00:09:10–00:09:45 cho thấy một phụ nữ trưởng thành tiếp Haruka; lời thoại nhắc bố mẹ và người quen cũ."
+    },
+    {
+      "start": 1325.0,
+      "end": 1402.0,
+      "speaker": "SPEAKER_06",
+      "character_id": "motoka",
+      "confidence": "high",
+      "evidence": "Đoạn omake có hình Motoka mặc đồ hầu gái và tự giới thiệu '乃木坂初佳'."
+    }
+  ],
   "characters": {
     "haruka": {
       "display_name": "Haruka Kasugano",
@@ -72,6 +137,30 @@
       "gender_confidence": "profile",
       "role": "older_neighbor_student",
       "default_self": "chị"
+    },
+    "nao_mother": {
+      "display_name": "Mẹ của Nao",
+      "native_name": "奈緒の母",
+      "aliases": ["Nao's mother", "奈緒の母"],
+      "age": null,
+      "age_band": "adult",
+      "age_confidence": "inferred_parent",
+      "gender": "female",
+      "gender_confidence": "cast_and_visual",
+      "role": "parent",
+      "default_self": "cô"
+    },
+    "teacher": {
+      "display_name": "Giáo viên",
+      "native_name": "教師",
+      "aliases": ["Teacher", "Giáo viên chủ nhiệm"],
+      "age": null,
+      "age_band": "adult",
+      "age_confidence": "inferred_adult_role",
+      "gender": "unknown",
+      "gender_confidence": "not_provided",
+      "role": "teacher",
+      "default_self": "tôi"
     },
     "kazuha": {
       "display_name": "Kazuha Migiwa",

@@ -142,5 +142,38 @@
       "Phiêu lưu"
     ],
     "episode_count": 1
+  },
+  {
+    "id": 7,
+    "slug": "yosuga-no-sora",
+    "title": "Yosuga no Sora",
+    "original_title": "Yosuga no Sora: In Solitude When We Are Least Alone (ヨスガノソラ)",
+    "type": "series",
+    "description": "Sau khi cha mẹ qua đời trong một vụ tai nạn, Haruka Kasugano và cô em gái sinh đôi Sora mất đi chỗ dựa duy nhất. Hai anh em quyết định rời thành phố và chuyển đến một thị trấn vùng quê, nơi họ từng trải qua những mùa hè bên người ông quá cố. Ban đầu, mọi thứ nơi đây vẫn quen thuộc và yên bình. Tuy nhiên, Haruka dần nhớ lại những ký ức từ thời thơ ấu. Những ký ức tưởng như đã bị lãng quên ấy bắt đầu làm thay đổi cuộc sống của hai anh em.",
+    "release_year": 2010,
+    "duration_minutes": 25,
+    "status": "published",
+    "quality": "HD",
+    "age_rating": "T18",
+    "country": "Nhật Bản",
+    "poster_url": "/assets/posters/yosuga-no-sora.svg",
+    "backdrop_url": "/assets/backdrops/yosuga-no-sora.svg",
+    "video_key": null,
+    "video_url": "",
+    "featured": 0,
+    "genres": [
+      "Drama",
+      "Ecchi",
+      "Lãng mạn",
+      "Harem"
+    ],
+    "tags": [
+      "Loạn luân",
+      "Vũ trụ thay thế",
+      "Sinh đôi",
+      "Dàn nhân vật",
+      "Harem"
+    ],
+    "episode_count": 12
   }
 ]

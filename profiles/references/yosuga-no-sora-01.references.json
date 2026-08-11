@@ -23,6 +23,14 @@
       "voice_samples": [],
       "face_images": []
     },
+    "nao_mother": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "teacher": {
+      "voice_samples": [],
+      "face_images": []
+    },
     "kazuha": {
       "voice_samples": [],
       "face_images": []

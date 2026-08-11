@@ -5,7 +5,7 @@ Pipeline này tạo phụ đề rời WebVTT trên chính máy xử lý. Video g
 Mục tiêu của pipeline:
 
 - WhisperX tự nhận diện ngôn ngữ, chuyển giọng nói thành văn bản và căn timestamp.
-- WhisperX/pyannote diarization tách người nói, sau đó VTT gắn nhãn `[Người nói 1]`, `[Người nói 2]`.
+- WhisperX/pyannote diarization tách người nói, sau đó VTT gắn nhãn `[Người nói 1]`, `[Người nói 2]` hoặc tên nhân vật nếu profile đã được duyệt.
 - inaSpeechSegmenter phân biệt vùng `speech`, `music`, `noise` và `noEnergy`. Giọng hát được xem là `music`, nên lời bài hát bị loại; lời thoại nói trên nền nhạc vẫn có thể giữ lại.
 - Chỉ file `.vtt` được upload lên R2 và đăng ký trong D1. Player nạp bằng HTML5 `<track>`.
 
@@ -50,6 +50,8 @@ $env:HF_TOKEN = 'hf_token_cua_ban'
 
 Nếu không muốn dùng diarization, chạy thêm `--no-diarize`; phụ đề vẫn có nhận diện ngôn ngữ và lọc speech/music/noise nhưng không có người nói.
 
+Với video nhiều giọng, có thể giới hạn số cụm để tránh pyannote gộp các giọng nữ vào nhau. Ví dụ tập mẫu hiện tại dùng `--num-speakers 8`; nếu chưa biết số chính xác, dùng `--min-speakers 4 --max-speakers 10`. Đây là tham số tách giọng, không phải số nhân vật chắc chắn.
+
 ## Rule nhân vật và xưng hô tiếng Việt
 
 Diarization chỉ biết các cụm giọng như `SPEAKER_00`, `SPEAKER_01`; nó không thể tự biết đó là Haruka, Sora hay nhân vật nào. Bộ rule local dùng profile để ánh xạ ID giọng sang nhân vật, lưu tuổi/giới tính/vai trò đã kiểm tra, rồi chọn xưng hô theo quan hệ và người đang được nói tới.
@@ -69,6 +71,17 @@ Nếu một cảnh có nhiều người, thêm người nghe theo khoảng thờ
 "scene_targets": [
   {"start": 34.4, "end": 90, "speaker": "SPEAKER_00", "listener": "sora"}
 ]
+```
+
+Khi một cue bị cắt qua chuyển cảnh hoặc diarization gộp hai giọng, dùng `segment_overrides` với `start`, `end`, `speaker` và `character_id`. Có thể áp dụng lại profile vào report hiện có mà không chạy lại video:
+
+```powershell
+& .\.venv-subtitles\Scripts\python.exe .\scripts\apply-character-profile.py `
+  --report ".\content\generated-subtitles\yosuga-no-sora-01.ja.diarized-8spk.segments.json" `
+  --character-profile ".\profiles\yosuga-no-sora-01.json" `
+  --pronoun-rules ".\config\pronoun-rules.vi.json" `
+  --output ".\content\generated-subtitles\yosuga-no-sora-01.ja.named.vtt" `
+  --report-output ".\content\generated-subtitles\yosuga-no-sora-01.ja.named.segments.json"
 ```
 
 Chạy lại pipeline, không dùng `--no-diarize`:
@@ -112,6 +125,8 @@ Sau đó match vào report đã diarize mà không phải chạy lại Whisper:
   --output ".\content\generated-subtitles\yosuga-no-sora-01.ja.reference-matched.vtt" `
   --report-output ".\content\generated-subtitles\yosuga-no-sora-01.ja.reference-matched.segments.json"
 ```
+
+Nếu chỉ cần tách speaker để đối chiếu hình ảnh trên máy CPU, thêm `--num-speakers 8 --no-embeddings`. Khi đã có mẫu giọng sạch, bỏ `--no-embeddings` để tạo speaker embedding và tự so khớp.
 
 Match chỉ chấp nhận khi điểm tương đồng vượt ngưỡng và cách biệt rõ với ứng viên thứ hai; nếu không chắc, cue giữ `SPEAKER_XX`/`needs_review`. Ảnh khuôn mặt là tín hiệu bổ trợ, không thay thế voice embedding trong cảnh không nhìn thấy mặt.
 

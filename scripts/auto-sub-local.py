@@ -39,6 +39,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=int(os.getenv("SUBTITLE_BATCH_SIZE", "4")))
     parser.add_argument("--hf-token", default=os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN"), help="Free Hugging Face read token for diarization")
     parser.add_argument("--no-diarize", action="store_true", help="Skip speaker diarization; not recommended")
+    parser.add_argument("--num-speakers", type=int, default=None, help="Force the expected number of distinct speakers")
+    parser.add_argument("--min-speakers", type=int, default=None, help="Lower bound for automatic speaker count")
+    parser.add_argument("--max-speakers", type=int, default=None, help="Upper bound for automatic speaker count")
     parser.add_argument("--no-align", action="store_true", help="Skip word alignment if the language has no alignment model")
     parser.add_argument("--no-speakers", action="store_true", help="Do not add visible speaker labels to VTT cues")
     parser.add_argument("--character-profile", default=os.getenv("CHARACTER_PROFILE"), help="JSON profile mapping diarization speaker IDs to characters")
@@ -140,10 +143,20 @@ def load_and_transcribe(args: argparse.Namespace, device: str, compute_type: str
 
             diarization_pipeline = DiarizationPipeline
         diarize_model = diarization_pipeline(token=args.hf_token, device=device)
+        if args.num_speakers is not None and (args.min_speakers is not None or args.max_speakers is not None):
+            raise RuntimeError("Chỉ dùng một trong --num-speakers hoặc --min-speakers/--max-speakers.")
+        diarize_kwargs = {"return_embeddings": True}
+        if args.num_speakers is not None:
+            diarize_kwargs["num_speakers"] = args.num_speakers
+        else:
+            if args.min_speakers is not None:
+                diarize_kwargs["min_speakers"] = args.min_speakers
+            if args.max_speakers is not None:
+                diarize_kwargs["max_speakers"] = args.max_speakers
         try:
-            diarize_output = diarize_model(audio, return_embeddings=True)
+            diarize_output = diarize_model(audio, **diarize_kwargs)
         except TypeError:
-            diarize_output = diarize_model(audio)
+            diarize_output = diarize_model(audio, **{key: value for key, value in diarize_kwargs.items() if key != "return_embeddings"})
         if isinstance(diarize_output, tuple):
             diarize_segments, speaker_embeddings = diarize_output
         else:
@@ -152,6 +165,9 @@ def load_and_transcribe(args: argparse.Namespace, device: str, compute_type: str
         diarization_info = {
             "enabled": True,
             "model": "pyannote/speaker-diarization-community-1",
+            "num_speakers": args.num_speakers,
+            "min_speakers": args.min_speakers,
+            "max_speakers": args.max_speakers,
             "speaker_embeddings": speaker_embeddings or {},
         }
     else:
@@ -178,6 +194,21 @@ def interval_overlap(start: float, end: float, zone_start: float, zone_end: floa
 
 def is_non_speech_marker(text: str) -> bool:
     return bool(NON_SPEECH_MARKER.match(text)) or any(mark in text for mark in ("♪", "♫", "♬"))
+
+
+def is_repetitive_vocalization(text: str) -> bool:
+    """Drop singing/humming and repeated vocal sounds misread as dialogue."""
+    compact = re.sub(r"[\s、。，．,.!?！？…〜~ー]+", "", str(text or ""))
+    if len(compact) < 6:
+        return False
+    vocal_chars = set("あいうえおんっ")
+    if set(compact) <= vocal_chars and len(set(compact)) <= 3:
+        return True
+    if len(set(compact)) == 1:
+        return True
+    if len(compact) % 2 == 0 and compact == compact[:2] * (len(compact) // 2):
+        return True
+    return False
 
 
 SENTENCE_END = re.compile(r"[。！？!?…]+$")
@@ -303,7 +334,7 @@ def filter_segments(raw_segments: list[dict], zones: list[tuple[str, float, floa
         if not text:
             normalized["decision"] = "remove_empty"
             removed.append(normalized)
-        elif is_non_speech_marker(text):
+        elif is_non_speech_marker(text) or is_repetitive_vocalization(text):
             normalized["decision"] = "remove_non_speech_marker"
             removed.append(normalized)
         elif speech >= max(0.15, duration * 0.25):
