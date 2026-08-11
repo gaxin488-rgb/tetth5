@@ -41,3 +41,5 @@ INSERT OR IGNORE INTO movie_genres(movie_id,genre_id) SELECT m.id,g.id FROM movi
 WITH RECURSIVE episode_numbers(number) AS (SELECT 1 UNION ALL SELECT number + 1 FROM episode_numbers WHERE number < 12)
 INSERT OR IGNORE INTO episodes(movie_id,season_number,episode_number,title,duration_minutes,status,video_key,video_url)
 SELECT m.id,1,episode_numbers.number,printf('Tập %02d',episode_numbers.number),25,'published',NULL,'' FROM movies m CROSS JOIN episode_numbers WHERE m.slug='yosuga-no-sora';
+UPDATE movies SET featured=0 WHERE slug='hanh-trinh-sao-bang';
+UPDATE movies SET backdrop_url='/assets/banners/yosuga-no-sora.jpg',featured=1 WHERE slug='yosuga-no-sora';

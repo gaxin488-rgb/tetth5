@@ -16,7 +16,7 @@
     "backdrop_url": "/assets/backdrops/hanh-trinh-sao-bang.svg",
     "video_key": null,
     "video_url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    "featured": 1,
+    "featured": 0,
     "genres": [
       "Khoa học viễn tưởng",
       "Phiêu lưu"
@@ -157,10 +157,10 @@
     "age_rating": "T18",
     "country": "Nhật Bản",
     "poster_url": "/assets/posters/yosuga-no-sora.svg",
-    "backdrop_url": "/assets/backdrops/yosuga-no-sora.svg",
+    "backdrop_url": "/assets/banners/yosuga-no-sora.jpg",
     "video_key": null,
     "video_url": "",
-    "featured": 0,
+    "featured": 1,
     "genres": [
       "Drama",
       "Ecchi",
