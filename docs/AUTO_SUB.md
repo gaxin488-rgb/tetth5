@@ -87,6 +87,54 @@ Kết quả sẽ có tên nhân vật trong VTT khi bật nhãn người nói, c
 
 Tuổi và giới tính trong profile là dữ liệu người dùng xác nhận; không nên suy ra chắc chắn chỉ từ giọng nói. Rule chỉ tự động chọn xưng hô khi có đủ quan hệ, tuổi/vai trò; quan hệ đặc biệt như anh-em song sinh nên ghi trong `relations` để ưu tiên kết quả thủ công.
 
+### Tự so khớp bằng mẫu giọng/khuôn mặt
+
+Diarization chỉ tạo `SPEAKER_00`... Muốn tự đổi sang tên nhân vật, dùng template `profiles/references/yosuga-no-sora-01.references.json`. Mỗi mẫu giọng phải là đoạn sạch chỉ có một nhân vật; ảnh nên là ảnh cận mặt cùng phong cách anime. Media nằm trong `profiles/references/media/` và không được commit.
+
+Điền mẫu giọng rồi tạo voice embedding local:
+
+```powershell
+& .\.venv-subtitles\Scripts\python.exe .\scripts\build-voice-reference-profile.py `
+  --profile ".\profiles\references\yosuga-no-sora-01.references.json" `
+  --output ".\profiles\references\generated\yosuga-no-sora-01.voice.json" `
+  --project-root "." `
+  --device cpu
+```
+
+Sau đó match vào report đã diarize mà không phải chạy lại Whisper:
+
+```powershell
+& .\.venv-subtitles\Scripts\python.exe .\scripts\match-voice-references.py `
+  --input "D:\web\video_goc\Yosuga no Sora - 01.mkv" `
+  --report ".\content\generated-subtitles\yosuga-no-sora-01.ja.diarized.segments.json" `
+  --voice-reference-profile ".\profiles\references\generated\yosuga-no-sora-01.voice.json" `
+  --character-profile ".\profiles\yosuga-no-sora-01.json" `
+  --output ".\content\generated-subtitles\yosuga-no-sora-01.ja.reference-matched.vtt" `
+  --report-output ".\content\generated-subtitles\yosuga-no-sora-01.ja.reference-matched.segments.json"
+```
+
+Match chỉ chấp nhận khi điểm tương đồng vượt ngưỡng và cách biệt rõ với ứng viên thứ hai; nếu không chắc, cue giữ `SPEAKER_XX`/`needs_review`. Ảnh khuôn mặt là tín hiệu bổ trợ, không thay thế voice embedding trong cảnh không nhìn thấy mặt.
+
+Nếu có ảnh tham chiếu cận mặt, có thể tạo embedding hình ảnh bằng CLIP local rồi match các khung hình giữa các cue thoại:
+
+```powershell
+& .\.venv-subtitles\Scripts\python.exe .\scripts\build-visual-reference-profile.py `
+  --profile ".\profiles\references\yosuga-no-sora-01.references.json" `
+  --output ".\profiles\references\generated\yosuga-no-sora-01.face.json" `
+  --project-root "." `
+  --device cpu
+
+& .\.venv-subtitles\Scripts\python.exe .\scripts\match-visual-references.py `
+  --input "D:\web\video_goc\Yosuga no Sora - 01.mkv" `
+  --report ".\content\generated-subtitles\yosuga-no-sora-01.ja.diarized.segments.json" `
+  --visual-reference-profile ".\profiles\references\generated\yosuga-no-sora-01.face.json" `
+  --character-profile ".\profiles\yosuga-no-sora-01.json" `
+  --output ".\content\generated-subtitles\yosuga-no-sora-01.ja.visual-matched.vtt" `
+  --report-output ".\content\generated-subtitles\yosuga-no-sora-01.ja.visual-matched.segments.json"
+```
+
+Visual matching dùng ảnh cận mặt và khung hình video, không phải mô hình nhận diện danh tính tuyệt đối; cảnh khuất mặt, quay lưng hoặc nhiều nhân vật trong cùng khung phải giữ trạng thái kiểm tra.
+
 ## Tạo phụ đề local
 
 ```powershell

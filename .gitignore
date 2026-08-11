@@ -9,6 +9,8 @@ wrangler.full.jsonc
 content/imports/*
 content/encoded/*
 content/generated-subtitles/*
+profiles/references/media/*
+profiles/references/generated/*
 !content/imports/.gitkeep
 !content/encoded/.gitkeep
 !content/generated-subtitles/.gitkeep

@@ -3,6 +3,13 @@
   "title": "Yosuga no Sora - 01",
   "metadata_status": "review_required",
   "notes": "Speaker_map phải được điền sau khi diarization tạo ra SPEAKER_00, SPEAKER_01... Tuổi là dữ liệu khởi tạo/suy luận và cần kiểm tra lại trước khi xuất bản.",
+  "reference_matching": {
+    "profile": "profiles/references/yosuga-no-sora-01.references.json",
+    "voice_method": "pyannote-speaker-embedding",
+    "face_method": "optional-visual-reference",
+    "voice_threshold": 0.55,
+    "voice_margin": 0.05
+  },
   "sources": [
     {
       "label": "Trang nhân vật chính thức",

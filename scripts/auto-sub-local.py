@@ -19,6 +19,7 @@ import urllib.request
 from pathlib import Path
 
 from character_rules import apply_character_rules
+from reference_matching import apply_reference_map, extract_reference_embeddings, match_embeddings
 
 
 NON_SPEECH_MARKER = re.compile(
@@ -42,6 +43,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-speakers", action="store_true", help="Do not add visible speaker labels to VTT cues")
     parser.add_argument("--character-profile", default=os.getenv("CHARACTER_PROFILE"), help="JSON profile mapping diarization speaker IDs to characters")
     parser.add_argument("--pronoun-rules", default=os.getenv("PRONOUN_RULES"), help="JSON Vietnamese pronoun rule overrides")
+    parser.add_argument("--voice-reference-profile", default=os.getenv("VOICE_REFERENCE_PROFILE"), help="JSON profile containing voice embeddings for named characters")
+    parser.add_argument("--voice-match-threshold", type=float, default=float(os.getenv("VOICE_MATCH_THRESHOLD", "0.55")))
+    parser.add_argument("--voice-match-margin", type=float, default=float(os.getenv("VOICE_MATCH_MARGIN", "0.05")))
     parser.add_argument("--output", default=None, help="Local WebVTT output path")
     parser.add_argument("--report", default=None, help="Local JSON report path")
     parser.add_argument("--output-key", default=None, help="R2 key for publishing")
@@ -100,13 +104,14 @@ def choose_compute_type(requested: str, device: str) -> str:
     return "float16" if device == "cuda" else "int8"
 
 
-def load_and_transcribe(args: argparse.Namespace, device: str, compute_type: str) -> tuple[dict, str]:
+def load_and_transcribe(args: argparse.Namespace, device: str, compute_type: str) -> tuple[dict, str, dict]:
     try:
         import whisperx
     except ImportError as exc:
         raise RuntimeError("Thiếu whisperx. Chạy scripts\\setup-free-subtitles.ps1 trước.") from exc
 
     audio = whisperx.load_audio(str(Path(args.input).resolve()))
+    diarization_info: dict = {"enabled": False, "speaker_embeddings": {}}
     print(f"3/6 WhisperX đang nhận dạng bằng model {args.model} trên {device}/{compute_type}…")
     model = whisperx.load_model(args.model, device, compute_type=compute_type)
     result = model.transcribe(audio, batch_size=max(1, args.batch_size), language=args.language)
@@ -135,12 +140,24 @@ def load_and_transcribe(args: argparse.Namespace, device: str, compute_type: str
 
             diarization_pipeline = DiarizationPipeline
         diarize_model = diarization_pipeline(token=args.hf_token, device=device)
-        diarize_segments = diarize_model(audio)
+        try:
+            diarize_output = diarize_model(audio, return_embeddings=True)
+        except TypeError:
+            diarize_output = diarize_model(audio)
+        if isinstance(diarize_output, tuple):
+            diarize_segments, speaker_embeddings = diarize_output
+        else:
+            diarize_segments, speaker_embeddings = diarize_output, {}
         result = whisperx.assign_word_speakers(diarize_segments, result)
+        diarization_info = {
+            "enabled": True,
+            "model": "pyannote/speaker-diarization-community-1",
+            "speaker_embeddings": speaker_embeddings or {},
+        }
     else:
         print("5/6 Bỏ qua diarization theo yêu cầu…")
 
-    return result, language
+    return result, language, diarization_info
 
 
 def speech_music_zones(input_path: Path) -> list[tuple[str, float, float]]:
@@ -392,7 +409,7 @@ def main() -> int:
     compute_type = choose_compute_type(args.compute_type, device)
     print("1/6 Kiểm tra pipeline local 0đ…")
     zones = speech_music_zones(input_path)
-    result, language = load_and_transcribe(args, device, compute_type)
+    result, language, diarization_info = load_and_transcribe(args, device, compute_type)
     raw_segments = result.get("segments") or []
     split_segments = split_transcript_segments(raw_segments, language)
     kept, removed = filter_segments(split_segments, zones)
@@ -408,6 +425,31 @@ def main() -> int:
         pronoun_rules = json.loads(rules_path.read_text(encoding="utf-8"))
     elif args.pronoun_rules:
         raise RuntimeError(f"Không tìm thấy pronoun rules: {rules_path}")
+    voice_matching: dict = {"enabled": False, "reason": "no_voice_reference_profile"}
+    if args.voice_reference_profile:
+        voice_profile_path = Path(args.voice_reference_profile).expanduser().resolve()
+        if not voice_profile_path.is_file():
+            raise RuntimeError(f"Không tìm thấy voice reference profile: {voice_profile_path}")
+        if character_profile is None:
+            raise RuntimeError("Voice matching cần --character-profile để biết danh sách character_id.")
+        voice_profile = json.loads(voice_profile_path.read_text(encoding="utf-8"))
+        reference_embeddings = extract_reference_embeddings(voice_profile, key="voice")
+        speaker_embeddings = diarization_info.get("speaker_embeddings") or {}
+        matched_map, diagnostics = match_embeddings(
+            speaker_embeddings,
+            reference_embeddings,
+            threshold=args.voice_match_threshold,
+            margin=args.voice_match_margin,
+        )
+        character_profile = apply_reference_map(character_profile, matched_map)
+        voice_matching = {
+            "enabled": True,
+            "profile_path": str(voice_profile_path),
+            "matched_speaker_map": matched_map,
+            "diagnostics": diagnostics,
+            "threshold": args.voice_match_threshold,
+            "margin": args.voice_match_margin,
+        }
     kept, character_summary = apply_character_rules(kept, character_profile, pronoun_rules)
     character_summary["profile_path"] = str(profile_path) if character_profile else None
     character_summary["rules_path"] = str(rules_path) if pronoun_rules else None
@@ -426,6 +468,8 @@ def main() -> int:
         "speech_music_zones": [{"label": label, "start": start, "end": end} for label, start, end in zones],
         "raw_segment_count": len(raw_segments),
         "split_segment_count": len(split_segments),
+        "diarization": diarization_info,
+        "voice_matching": voice_matching,
         "character_rules": character_summary,
         "kept": kept,
         "removed": removed,

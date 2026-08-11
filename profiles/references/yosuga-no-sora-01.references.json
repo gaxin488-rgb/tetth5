@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "title": "Yosuga no Sora - reference profile",
+  "notes": "Điền voice_samples hoặc face_images bằng các mẫu sạch của từng nhân vật. Các file media nên đặt trong profiles/references/media/ và không commit lên Git.",
+  "method": {
+    "voice": "pyannote-speaker-embedding",
+    "face": "optional-visual-reference"
+  },
+  "characters": {
+    "haruka": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "sora": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "akira": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "nao": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "kazuha": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "kozue": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "ryouhei": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "motoka": {
+      "voice_samples": [],
+      "face_images": []
+    },
+    "yahiro": {
+      "voice_samples": [],
+      "face_images": []
+    }
+  }
+}
