@@ -70,9 +70,8 @@ async function listMovies(env, url) {
   const params = []; const where = ["m.status = 'published'"];
   if (q) { where.push('(m.title LIKE ? OR m.original_title LIKE ? OR m.description LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (type && type !== 'all') { where.push('m.type = ?'); params.push(type); }
-  const sql = `SELECT m.*, GROUP_CONCAT(g.name, '||') AS genres, COUNT(DISTINCT e.id) AS episode_count
-    FROM movies m LEFT JOIN movie_genres mg ON mg.movie_id=m.id LEFT JOIN genres g ON g.id=mg.genre_id
-    LEFT JOIN episodes e ON e.movie_id=m.id AND e.status='published'
+  const sql = `SELECT m.*, (SELECT GROUP_CONCAT(g.name, '||') FROM movie_genres mg JOIN genres g ON g.id=mg.genre_id WHERE mg.movie_id=m.id) AS genres, COUNT(DISTINCT e.id) AS episode_count
+    FROM movies m LEFT JOIN episodes e ON e.movie_id=m.id AND e.status='published'
     WHERE ${where.join(' AND ')} GROUP BY m.id ORDER BY m.featured DESC, m.updated_at DESC`;
   const result = await env.DB.prepare(sql).bind(...params).all();
   return json({ movies: result.results || [], source: 'd1' }, 200, { 'cache-control': 'public, max-age=30' });
@@ -83,7 +82,7 @@ async function getMovie(env, slug) {
     const data = await fallbackMovies(env); const movie = data.find(m => m.slug === slug);
     return movie ? json(movie) : json({ error: 'movie_not_found' }, 404);
   }
-  const movie = await env.DB.prepare(`SELECT m.*, GROUP_CONCAT(g.name, '||') AS genres FROM movies m LEFT JOIN movie_genres mg ON mg.movie_id=m.id LEFT JOIN genres g ON g.id=mg.genre_id WHERE m.slug=? AND m.status='published' GROUP BY m.id`).bind(slug).first();
+  const movie = await env.DB.prepare(`SELECT m.*, (SELECT GROUP_CONCAT(g.name, '||') FROM movie_genres mg JOIN genres g ON g.id=mg.genre_id WHERE mg.movie_id=m.id) AS genres FROM movies m WHERE m.slug=? AND m.status='published'`).bind(slug).first();
   if (!movie) return json({ error: 'movie_not_found' }, 404);
   const episodes = await env.DB.prepare(`SELECT id, season_number, episode_number, title, duration_minutes, video_key, video_url FROM episodes WHERE movie_id=? AND status='published' ORDER BY season_number, episode_number`).bind(movie.id).all();
   return json({ ...movie, episodes: episodes.results || [] });
