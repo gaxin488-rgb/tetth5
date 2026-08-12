@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Build a local cue-by-cue audio/video review dashboard.
-
-The page is deliberately review-only. It reads evidence indexes generated
-from the encoded videos and writes a static HTML page containing the exact
-cue range, the midpoint frame, the machine candidate and alternatives. A
-decision is saved in browser localStorage and can be exported as JSON. This
-script never edits VTT files or character reports.
-"""
+"""Build a lightweight one-cue-at-a-time audio/video review dashboard."""
 
 from __future__ import annotations
 
@@ -15,7 +8,6 @@ import html
 import json
 import os
 from pathlib import Path
-from urllib.parse import quote_plus
 
 
 def read_evidence(index_path: Path) -> list[dict]:
@@ -28,89 +20,170 @@ def read_evidence(index_path: Path) -> list[dict]:
     return rows
 
 
-def alt_html(item: dict) -> str:
-    rows = []
-    for candidate in (item.get("alternatives") or [])[:6]:
-        rows.append(
-            "<li>"
-            f"<b>{html.escape(str(candidate.get('character_name') or candidate.get('character_id') or 'unknown'))}</b> "
-            f"<code>{html.escape(str(candidate.get('character_id') or ''))}</code> "
-            f"score={html.escape(str(candidate.get('score') or ''))}"
-            "</li>"
-        )
-    return "".join(rows) or "<li>No alternative candidate</li>"
-
-
-def alt_options(item: dict) -> str:
-    options = ["<option value=''>Choose an alternative candidate</option>"]
-    for candidate in (item.get("alternatives") or [])[:6]:
-        character_id = str(candidate.get("character_id") or "").strip()
-        if not character_id:
-            continue
-        label = str(candidate.get("character_name") or character_id)
-        score = str(candidate.get("score") or "")
-        options.append(
-            f"<option value='{html.escape(character_id, quote=True)}'>"
-            f"{html.escape(label)} ({html.escape(character_id)}; score={html.escape(score)})"
-            "</option>"
-        )
-    return "".join(options)
-
-
-def media_url(video_path: str, output_parent: Path) -> str:
-    source = Path(video_path).resolve()
+def relative_url(path: Path, base: Path) -> str:
     try:
-        return html.escape(Path(os.path.relpath(source, output_parent.resolve())).as_posix(), quote=True)
+        return Path(os.path.relpath(path.resolve(), base.resolve())).as_posix()
     except ValueError:
-        return html.escape(source.as_uri(), quote=True)
+        return path.resolve().as_uri()
 
 
-def cue_html(item: dict, number: int, output_parent: Path) -> str:
-    episode = html.escape(str(item.get("episode") or ""), quote=True)
-    cue = int(item.get("cue") or number)
-    start = float(item.get("start") or 0)
-    end = float(item.get("end") or 0)
-    character = html.escape(str(item.get("character_name") or "unresolved"))
-    character_id = html.escape(str(item.get("character_id") or ""), quote=True)
-    status = html.escape(str(item.get("match_status") or ""))
-    score = html.escape(str(item.get("candidate_score") or ""))
-    margin = html.escape(str(item.get("candidate_margin") or ""))
-    text = html.escape(str(item.get("text") or ""))
-    frames = []
-    for frame in item.get("frames") or []:
-        if str(frame.get("label")) == "mid":
-            frame_file = Path(str(item.get("_frame_root") or output_parent)) / str(frame.get("path") or "")
-            frame_path = html.escape(Path(os.path.relpath(frame_file.resolve(), output_parent.resolve())).as_posix(), quote=True)
-            frames.append(f"<img loading='lazy' src='{frame_path}' alt='midpoint frame' width='420'>")
-    query = quote_plus(str(item.get("research_query") or ""))
-    return f"""
-    <article class='cue' id='cue-{episode}-{cue:04d}' data-episode='{episode}' data-cue='{cue}'
-      data-start='{start:.3f}' data-end='{end:.3f}' data-character='{character_id}' data-status='{status}'>
-      <header><h2>Episode {episode} - cue {cue}</h2><span class='status'>{status} - needs_review={str(bool(item.get('needs_review'))).lower()}</span></header>
-      <p class='time'><b>{start:.3f}s - {end:.3f}s</b> - duration {max(0, end-start):.3f}s</p>
-      <p class='text'>{text}</p>
-      <video class='cue-video' controls preload='metadata' src='{media_url(str(item.get('video') or ''), output_parent)}'
-        data-start='{start:.3f}' data-end='{end:.3f}'></video>
-      <div class='candidate'><b>Main candidate:</b> {character} <code>{character_id}</code><br>
-        score=<code>{score}</code> - margin=<code>{margin}</code></div>
-      <details><summary>Alternative candidates</summary><ol>{alt_html(item)}</ol></details>
-      <p><a href='https://www.google.com/search?q={query}' target='_blank' rel='noreferrer'>Search character information</a></p>
-      <div class='frame'>{''.join(frames) or '<span>No midpoint frame</span>'}</div>
-      <label class='decision'>Review result:
-        <select class='decision-select'><option value=''>Not reviewed</option><option value='confirmed'>Confirm main candidate</option><option value='alternative'>Confirm alternative</option><option value='unresolved'>Still unresolved</option></select>
-      </label>
-      <select class='alternative-choice'>{alt_options(item)}</select>
-      <input class='decision-character' placeholder='Confirmed character_id (if typed manually)' autocomplete='off'>
-      <textarea class='decision-note' placeholder='Short note: voice, frame, context'></textarea>
-      <div class='checks'>
-        <label><input type='checkbox' class='check-timestamp'> Timestamp checked</label>
-        <label><input type='checkbox' class='check-video'> Video/audio segment checked</label>
-        <label><input type='checkbox' class='check-frame'> Frame/context checked</label>
-        <label><input type='checkbox' class='check-candidates'> Main and alternatives compared</label>
-      </div>
-      <button class='save-decision' type='button'>Save local decision</button>
-    </article>
-    """
+def prepare_item(item: dict, output_parent: Path) -> dict:
+    prepared = {key: value for key, value in item.items() if not key.startswith("_")}
+    prepared["video_url"] = relative_url(Path(str(item.get("video") or "")), output_parent)
+    frame = next((frame for frame in item.get("frames") or [] if frame.get("label") == "mid"), None)
+    if frame:
+        frame_path = Path(str(item.get("_frame_root") or output_parent)) / str(frame.get("path") or "")
+        prepared["frame_url"] = relative_url(frame_path, output_parent)
+        prepared["frame_seconds"] = frame.get("seconds")
+    else:
+        prepared["frame_url"] = ""
+        prepared["frame_seconds"] = None
+    return prepared
+
+
+HTML_TEMPLATE = r'''<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CineZero - review __CUE_COUNT__ cues</title>
+<style>
+body{font:15px system-ui;background:#101218;color:#edf1f7;max-width:1220px;margin:0 auto;padding:18px}
+h1{margin-bottom:4px}.toolbar{position:sticky;top:0;z-index:10;background:#171a24;border:1px solid #34394a;padding:12px;border-radius:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,select,input,textarea{font:inherit;background:#0c0f16;color:#edf1f7;border:1px solid #3d4352;border-radius:8px;padding:8px}
+button{cursor:pointer;background:#2e4164}button:disabled{opacity:.45;cursor:not-allowed}
+.cue{border:1px solid #34394a;border-radius:14px;padding:18px;margin:16px 0;background:#171a24}
+.cue header{display:flex;gap:12px;justify-content:space-between;align-items:center}h2{margin:0}.status{color:#ffc36b;font-size:12px}
+.time{color:#91baff}.text{font-size:20px;white-space:pre-wrap}.cue-video{display:block;width:min(900px,100%);background:#000;margin:14px 0}
+.candidate{line-height:1.8}code{color:#b9d1ff}a{color:#8fc7ff}.frame img{max-width:650px;width:100%;height:auto;border-radius:8px}
+details{margin:12px 0}summary{cursor:pointer;color:#b9d1ff}.decision-character,.decision-note,.alternative-choice{display:block;width:min(700px,100%);margin-top:8px}
+.decision-note{min-height:65px}.checks{display:grid;gap:5px;margin:14px 0;color:#c7d0df}.saved{outline:2px solid #58c889}.small{color:#aeb8c8;font-size:13px}.error{color:#ff8b8b}
+</style></head><body>
+<h1>Đối chiếu nhân vật - __CUE_COUNT__ cue</h1>
+<p class="small">Chỉ cue đang chọn mới tải video và ảnh. Phát video sẽ tự nhảy đến <code>start</code> và dừng ở <code>end</code>. Muốn xác nhận phải kiểm tra đủ timestamp, âm thanh/hình ảnh, ảnh midpoint và ứng viên.</p>
+<div class="toolbar">
+  <label>Tập <select id="episode-filter"><option value="all">Tất cả</option></select></label>
+  <label>Cue <select id="cue-select"></select></label>
+  <button id="previous-button" type="button">← Trước</button>
+  <button id="next-button" type="button">Sau →</button>
+  <button id="unreviewed-button" type="button">Chưa kiểm tra tiếp</button>
+  <button id="export-button" type="button">Xuất JSON</button>
+  <span id="progress"></span>
+</div>
+<main id="cue-view"></main>
+<script>
+const cues = __CUE_PAYLOAD__;
+const decisionKey = 'cinezero-cue-review-decisions-v3';
+const decisions = JSON.parse(localStorage.getItem(decisionKey) || '{}');
+const episodeFilter = document.querySelector('#episode-filter');
+const cueSelect = document.querySelector('#cue-select');
+const view = document.querySelector('#cue-view');
+const progress = document.querySelector('#progress');
+const episodes = [...new Set(cues.map(c => c.episode))].sort();
+let currentIndex = 0;
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+}
+function cueKey(c) { return String(c.episode).padStart(2, '0') + ':' + c.cue; }
+function filteredCues() { return episodeFilter.value === 'all' ? cues : cues.filter(c => String(c.episode) === episodeFilter.value); }
+function alternativeOptions(c) {
+  return '<option value="">Chọn ứng viên thay thế</option>' + (c.alternatives || []).slice(0, 6).map(a =>
+    `<option value="${esc(a.character_id)}">${esc(a.character_name || a.character_id)} (${esc(a.character_id)}; score=${esc(a.score)})</option>`
+  ).join('');
+}
+function renderSelectors() {
+  const list = filteredCues();
+  cueSelect.innerHTML = list.map((c, i) => `<option value="${i}">${esc(cueKey(c))} - ${esc(c.text || '')}</option>`).join('');
+  cueSelect.value = String(currentIndex);
+  document.querySelector('#previous-button').disabled = currentIndex <= 0;
+  document.querySelector('#next-button').disabled = currentIndex >= list.length - 1;
+}
+function updateProgress() {
+  const list = filteredCues();
+  progress.textContent = Object.keys(decisions).length + '/' + cues.length + ' đã lưu - đang xem ' + (list[currentIndex] ? cueKey(list[currentIndex]) : '-');
+}
+function renderCue() {
+  const list = filteredCues();
+  if (!list.length) { view.innerHTML = '<p class="error">Không có cue.</p>'; return; }
+  if (currentIndex >= list.length) currentIndex = list.length - 1;
+  if (currentIndex < 0) currentIndex = 0;
+  const c = list[currentIndex];
+  const saved = decisions[cueKey(c)] || {};
+  const alternatives = (c.alternatives || []).slice(0, 6);
+  const altList = alternatives.length
+    ? '<ol>' + alternatives.map(a => `<li><b>${esc(a.character_name || a.character_id)}</b> <code>${esc(a.character_id)}</code> score=<code>${esc(a.score)}</code></li>`).join('') + '</ol>'
+    : '<p>Không có ứng viên thay thế.</p>';
+  const frame = c.frame_url
+    ? `<img src="${esc(c.frame_url)}" alt="Ảnh midpoint tại ${esc(c.frame_seconds)} giây"><p class="small">Ảnh midpoint: ${esc(c.frame_seconds)}s</p>`
+    : '<span>Không có ảnh midpoint</span>';
+  view.innerHTML = `<article class="cue ${saved.decision ? 'saved' : ''}">
+    <header><h2>Tập ${esc(c.episode)} - cue ${esc(c.cue)}</h2><span class="status">${esc(c.match_status)} - needs_review=${Boolean(c.needs_review)}</span></header>
+    <p class="time"><b>${Number(c.start).toFixed(3)}s - ${Number(c.end).toFixed(3)}s</b> - duration ${(Number(c.end) - Number(c.start)).toFixed(3)}s</p>
+    <p class="text">${esc(c.text)}</p>
+    <video id="cue-video" class="cue-video" controls preload="metadata" src="${esc(c.video_url)}" data-start="${Number(c.start).toFixed(3)}" data-end="${Number(c.end).toFixed(3)}"></video>
+    <p class="small">Video: <code>${esc(c.video_url)}</code></p>
+    <div class="candidate"><b>Ứng viên chính:</b> ${esc(c.character_name || 'unresolved')} <code>${esc(c.character_id)}</code><br>score=<code>${esc(c.candidate_score)}</code> - margin=<code>${esc(c.candidate_margin)}</code></div>
+    <details><summary>Ứng viên thay thế (${alternatives.length})</summary>${altList}</details>
+    <p><a href="https://www.google.com/search?q=${encodeURIComponent(c.research_query || '')}" target="_blank" rel="noreferrer">Tìm thông tin nhân vật</a></p>
+    <div class="frame">${frame}</div>
+    <label>Kết quả nghe/xem:
+      <select id="decision-select"><option value="">Chưa kiểm tra</option><option value="confirmed">Xác nhận ứng viên chính</option><option value="alternative">Xác nhận ứng viên thay thế</option><option value="unresolved">Chưa xác định</option></select>
+    </label>
+    <select id="alternative-choice" class="alternative-choice">${alternativeOptions(c)}</select>
+    <input id="decision-character" class="decision-character" placeholder="character_id xác nhận nếu tự nhập" autocomplete="off">
+    <textarea id="decision-note" class="decision-note" placeholder="Ghi chú: giọng, hình ảnh, ngữ cảnh"></textarea>
+    <div class="checks">
+      <label><input id="check-timestamp" type="checkbox"> Đã kiểm tra timestamp</label>
+      <label><input id="check-video" type="checkbox"> Đã nghe/xem đúng đoạn video</label>
+      <label><input id="check-frame" type="checkbox"> Đã đối chiếu ảnh/mốc hình</label>
+      <label><input id="check-candidates" type="checkbox"> Đã so ứng viên chính và thay thế</label>
+    </div>
+    <button id="save-decision" type="button">Lưu quyết định local</button>
+    <span id="save-message" class="small"></span>
+  </article>`;
+  document.querySelector('#decision-select').value = saved.decision || '';
+  document.querySelector('#alternative-choice').value = saved.alternative_id || '';
+  document.querySelector('#decision-character').value = saved.character_id || '';
+  document.querySelector('#decision-note').value = saved.note || '';
+  const checks = saved.checks || {};
+  document.querySelector('#check-timestamp').checked = Boolean(checks.timestamp);
+  document.querySelector('#check-video').checked = Boolean(checks.video_audio);
+  document.querySelector('#check-frame').checked = Boolean(checks.frame);
+  document.querySelector('#check-candidates').checked = Boolean(checks.candidates);
+  const video = document.querySelector('#cue-video');
+  video.addEventListener('loadedmetadata', () => { if (!video.dataset.cued) video.currentTime = Number(c.start); });
+  video.addEventListener('play', () => { if (!video.dataset.cued) { video.dataset.cued = '1'; video.currentTime = Number(c.start); } });
+  video.addEventListener('timeupdate', () => { if (video.currentTime >= Number(c.end)) { video.pause(); video.currentTime = Number(c.start); } });
+  document.querySelector('#save-decision').onclick = () => {
+    const decision = document.querySelector('#decision-select').value;
+    const checkState = {
+      timestamp: document.querySelector('#check-timestamp').checked,
+      video_audio: document.querySelector('#check-video').checked,
+      frame: document.querySelector('#check-frame').checked,
+      candidates: document.querySelector('#check-candidates').checked
+    };
+    const message = document.querySelector('#save-message');
+    if ((decision === 'confirmed' || decision === 'alternative') && !Object.values(checkState).every(Boolean)) { message.textContent = 'Cần tích đủ 4 mục kiểm tra trước khi xác nhận.'; return; }
+    const alternativeId = document.querySelector('#alternative-choice').value;
+    const typedId = document.querySelector('#decision-character').value.trim();
+    if (decision === 'alternative' && !alternativeId && !typedId) { message.textContent = 'Hãy chọn hoặc nhập character_id thay thế.'; return; }
+    decisions[cueKey(c)] = {decision, character_id: typedId, alternative_id: alternativeId, note: document.querySelector('#decision-note').value.trim(), checks: checkState, saved_at: new Date().toISOString()};
+    localStorage.setItem(decisionKey, JSON.stringify(decisions));
+    message.textContent = 'Đã lưu local.';
+    renderSelectors();
+    updateProgress();
+  };
+  updateProgress();
+}
+episodes.forEach(e => { const option = document.createElement('option'); option.value = e; option.textContent = 'Tập ' + e; episodeFilter.appendChild(option); });
+episodeFilter.onchange = () => { currentIndex = 0; renderSelectors(); renderCue(); };
+cueSelect.onchange = () => { currentIndex = Number(cueSelect.value) || 0; renderCue(); };
+document.querySelector('#previous-button').onclick = () => { currentIndex--; renderSelectors(); renderCue(); };
+document.querySelector('#next-button').onclick = () => { currentIndex++; renderSelectors(); renderCue(); };
+document.querySelector('#unreviewed-button').onclick = () => { const index = cues.findIndex(c => !decisions[cueKey(c)]); if (index < 0) return; episodeFilter.value = 'all'; currentIndex = index; renderSelectors(); renderCue(); window.scrollTo({top: 0, behavior: 'smooth'}); };
+document.querySelector('#export-button').onclick = () => { const blob = new Blob([JSON.stringify(decisions, null, 2)], {type: 'application/json'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'cue-review-decisions.json'; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000); };
+renderSelectors();
+renderCue();
+</script></body></html>
+'''
 
 
 def build(index_paths: list[Path], output: Path) -> None:
@@ -118,49 +191,13 @@ def build(index_paths: list[Path], output: Path) -> None:
     for path in index_paths:
         evidence.extend(read_evidence(path))
     evidence.sort(key=lambda item: (str(item.get("episode") or ""), int(item.get("cue") or 0)))
-    cards = "".join(cue_html(item, index, output.parent) for index, item in enumerate(evidence, 1))
+    cues = [prepare_item(item, output.parent) for item in evidence]
+    payload = json.dumps(cues, ensure_ascii=True, separators=(",", ":"))
+    payload = payload.replace("<", "\\u003c")
+    content = HTML_TEMPLATE.replace("__CUE_PAYLOAD__", payload).replace("__CUE_COUNT__", str(len(cues)))
     output.parent.mkdir(parents=True, exist_ok=True)
-    content = f"""<!doctype html>
-<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-<title>CineZero - review {len(evidence)} cues</title>
-<style>
-body{{font:15px system-ui;background:#101218;color:#edf1f7;max-width:1220px;margin:0 auto;padding:18px}}
-h1{{margin-bottom:4px}} .toolbar{{position:sticky;top:0;z-index:10;background:#171a24;border:1px solid #34394a;padding:12px;border-radius:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}}
-button,select,input,textarea{{font:inherit;background:#0c0f16;color:#edf1f7;border:1px solid #3d4352;border-radius:8px;padding:8px}}
-button{{cursor:pointer;background:#2e4164}} .cue{{border:1px solid #34394a;border-radius:14px;padding:16px;margin:16px 0;background:#171a24}}
-.cue header{{display:flex;gap:12px;justify-content:space-between;align-items:center}} h2{{margin:0}} .status{{color:#ffc36b;font-size:12px}} .time{{color:#91baff}} .text{{font-size:18px;white-space:pre-wrap}}
-.cue-video{{display:block;width:min(900px,100%);background:#000;margin:12px 0}} .candidate{{line-height:1.7}} code{{color:#b9d1ff}} a{{color:#8fc7ff}}
-.frame img{{max-width:420px;width:100%;height:auto;border-radius:8px}} details{{margin:10px 0}} summary{{cursor:pointer;color:#b9d1ff}}
-.decision{{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}} .decision-character,.decision-note,.alternative-choice{{display:block;width:min(700px,100%);margin-top:8px}} .decision-note{{min-height:55px}} .checks{{display:grid;gap:5px;margin:12px 0;color:#c7d0df}}
-.saved{{outline:2px solid #58c889}} .hidden{{display:none}}
-</style></head><body>
-<h1>Cue character review - {len(evidence)} cues</h1>
-<p>Each video starts at the cue timestamp and stops at the cue end. Check the audio, midpoint frame, candidates and context. Confirmed decisions require all four checks and are only applied after importing the exported JSON.</p>
-<div class='toolbar'><label>Episode <select id='episode-filter'><option value='all'>All</option></select></label><label>Find cue <input id='cue-filter' placeholder='07:91'></label><button id='next-button'>Next unreviewed</button><button id='export-button'>Export decisions JSON</button><span id='progress'></span></div>
-<main id='cards'>{cards}</main>
-<script>
-const key='cinezero-cue-review-decisions-v2';
-const cards=[...document.querySelectorAll('.cue')];
-const decisions=JSON.parse(localStorage.getItem(key)||'{{}}');
-const episodeFilter=document.querySelector('#episode-filter');
-const cueFilter=document.querySelector('#cue-filter');
-const progress=document.querySelector('#progress');
-const episodes=[...new Set(cards.map(x=>x.dataset.episode))].sort();
-episodes.forEach(e=>{{const o=document.createElement('option');o.value=e;o.textContent='Episode '+e;episodeFilter.appendChild(o)}});
-function keyFor(c){{return c.dataset.episode+':'+c.dataset.cue}}
-function applySaved(c){{const d=decisions[keyFor(c)]; if(!d)return; c.classList.add('saved'); c.querySelector('.decision-select').value=d.decision||''; c.querySelector('.alternative-choice').value=d.alternative_id||''; c.querySelector('.decision-character').value=d.character_id||''; c.querySelector('.decision-note').value=d.note||''; const checks=d.checks||{{}}; c.querySelector('.check-timestamp').checked=Boolean(checks.timestamp); c.querySelector('.check-video').checked=Boolean(checks.video_audio); c.querySelector('.check-frame').checked=Boolean(checks.frame); c.querySelector('.check-candidates').checked=Boolean(checks.candidates)}}
-cards.forEach(c=>{{applySaved(c);c.querySelector('.save-decision').onclick=()=>{{const decision=c.querySelector('.decision-select').value; const checks={{timestamp:c.querySelector('.check-timestamp').checked,video_audio:c.querySelector('.check-video').checked,frame:c.querySelector('.check-frame').checked,candidates:c.querySelector('.check-candidates').checked}}; if((decision==='confirmed'||decision==='alternative')&&!Object.values(checks).every(Boolean)){{alert('A confirmation requires all four checks.');return}} const alternativeId=c.querySelector('.alternative-choice').value; const typedId=c.querySelector('.decision-character').value.trim(); if(decision==='alternative'&&!alternativeId&&!typedId){{alert('Choose or type the confirmed alternative character_id.');return}} const d={{decision,character_id:typedId,alternative_id:alternativeId,note:c.querySelector('.decision-note').value.trim(),checks,saved_at:new Date().toISOString()}};decisions[keyFor(c)]=d;localStorage.setItem(key,JSON.stringify(decisions));c.classList.add('saved');update()}}}});
-function visible(c){{return (episodeFilter.value==='all'||c.dataset.episode===episodeFilter.value)&&(!cueFilter.value.trim()||keyFor(c).includes(cueFilter.value.trim()))}}
-function update(){{let shown=0;cards.forEach(c=>{{const yes=visible(c);c.classList.toggle('hidden',!yes);shown+=yes?1:0}});progress.textContent=Object.keys(decisions).length+'/'+cards.length+' saved; showing '+shown}}
-episodeFilter.onchange=update;cueFilter.oninput=update;
-document.querySelector('#next-button').onclick=()=>{{const c=cards.find(x=>!decisions[keyFor(x)]);if(!c)return;episodeFilter.value='all';cueFilter.value=keyFor(c);update();c.scrollIntoView({{behavior:'smooth',block:'start'}})}};
-document.querySelector('#export-button').onclick=()=>{{const blob=new Blob([JSON.stringify(decisions,null,2)],{{type:'application/json'}});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='cue-review-decisions.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}};
-document.addEventListener('play',e=>{{const v=e.target;if(!v.matches('.cue-video'))return;const start=Number(v.dataset.start||0),end=Number(v.dataset.end||0);if(!v.dataset.cued){{v.dataset.cued='1';v.currentTime=start}}v.ontimeupdate=()=>{{if(v.currentTime>=end){{v.pause();v.currentTime=start}}}}}},true);
-update();
-</script></body></html>
-"""
     output.write_text(content, encoding="utf-8")
-    print(f"CUES={len(evidence)}")
+    print(f"CUES={len(cues)}")
     print(f"OUTPUT={output.resolve()}")
 
 

@@ -50,6 +50,16 @@ python -m http.server 8765
 Then open
 `http://127.0.0.1:8765/content/generated-subtitles/video-evidence/batch-review-remaining/review-dashboard.html`.
 
+Run the full technical evidence check (it uses `ffprobe`, does not claim that
+the human has listened to the cue, and returns one report for audit):
+
+```powershell
+python scripts/check-cue-evidence.py `
+  --evidence-root .\content\generated-subtitles\video-evidence\batch-review-remaining `
+  --reports-dir .\content\generated-subtitles `
+  --output .\content\generated-subtitles\video-evidence\batch-review-remaining\technical-validation.json
+```
+
 Each card opens the source video, seeks to the cue start, stops at the cue end,
 shows the midpoint frame and lists the main/alternative candidates with score
 and margin. Decisions are saved locally in the browser and can be exported as
