@@ -287,9 +287,9 @@ Các trường quan trọng gồm `recommended_character_id`, `recommendation_st
 
 ## Trạng thái bộ dữ liệu hiện tại
 
-Lần chạy checker hiện tại của tập 02–12 có 11 tập và 3.175 cue, trong đó còn 1.812 cue `needs_review`. Hai cue chồng lớp ở tập 07/12 được giữ nguyên theo VTT nguồn và đã được checker ghi nhận là overlap có chủ đích.
+Lần chạy checker hiện tại của tập 02–12 có 11 tập và 3.175 cue, trong đó còn 1.813 cue `needs_review`. Các cue chồng lớp/lùi theo lớp phụ đề nguồn được giữ nguyên timestamp; checker ghi nhận chúng là overlap có chủ đích, không tự sắp lại thứ tự.
 
-Evidence pack hiện đã trích 6 ảnh cho 2 cue lỗi, không lỗi tạo ảnh. Ảnh giúp kiểm tra bối cảnh nhân vật nhưng không thay thế việc nghe âm thanh; người trong khung hình có thể là người nghe chứ không phải người đang nói.
+Evidence pack overlap hiện đã trích 63 ảnh cho 21 cue ở các cặp chồng/lùi của tập 02–12, không lỗi tạo ảnh. Ảnh giúp kiểm tra bối cảnh nhân vật nhưng không thay thế việc nghe âm thanh; các cue `context_rule` vẫn phải nghe lại.
 
 Lần chẩn đoán ngữ cảnh hiện tại xử lý 3.110 cue: 1.272 cue có ngữ cảnh hỗ trợ, 777 cue có ứng viên yếu và 1.061 cue vẫn mơ hồ. Có 101 cue được đề xuất đổi nhãn; tất cả vẫn giữ `do_not_auto_apply=true` để người kiểm tra nghe lại trước.
 

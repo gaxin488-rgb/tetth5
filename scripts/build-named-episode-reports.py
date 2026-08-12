@@ -107,6 +107,27 @@ MANUAL_RULES = (
         "sora",
         "episode-02 mosquito scene: Sora reacts to the mosquito and clings to Haruka",
     ),
+    # Episode 04, 00:18:46.600-00:19:00.010: the source subtitles carry
+    # two interleaved calls during Kazuha and Haruka's embrace.  The voice
+    # matcher confuses this short, overlapping scene with Sora/Kozue, so keep
+    # the source cue order and use the visible characters plus the addressed
+    # names as the title-specific mapping.
+    ManualCueRule(
+        "04",
+        frozenset({244, 249, 251, 252}),
+        "haruka",
+        "episode-04 video/context review: the silver-haired Haruka calls or answers Kazuha; duplicate source-layer cues keep their original timestamps",
+        status="context_rule",
+        needs_review=True,
+    ),
+    ManualCueRule(
+        "04",
+        frozenset({245, 246, 247, 248, 250}),
+        "kazuha",
+        "episode-04 video/context review: the black-haired Kazuha calls Haruka; duplicate source-layer cues keep their original timestamps",
+        status="context_rule",
+        needs_review=True,
+    ),
     # Episode 07, 00:07:42.140-00:07:50.530: the source ASS contains a
     # background argument (Nao's parents) plus an overlapping Default-Alt
     # layer where Nao says "Stop it" from the bath.  The parent voices are
@@ -133,6 +154,26 @@ MANUAL_RULES = (
         frozenset({91, 92, 93}),
         "nao",
         "episode-07 manual video review at 00:07:45.150-00:07:49.150: the visible short dark-haired girl with glasses is Nao Yorihime",
+    ),
+    # Episode 07, 00:14:57.700-00:14:59.410: two exact-time source layers
+    # read "Nao-chan?" and "Haru-chan?" over the same pool shot.  The silver-
+    # haired boy on the diving board is Haruka and the dark-haired girl in
+    # the pool is Nao; both cues were previously mislabeled as Sora.
+    ManualCueRule(
+        "07",
+        frozenset({186}),
+        "haruka",
+        "episode-07 video/source-layer review at 00:14:57.700-00:14:59.410: Haruka on the diving board says the Nao-chan line; overlapping layer preserved",
+        status="context_rule",
+        needs_review=True,
+    ),
+    ManualCueRule(
+        "07",
+        frozenset({187}),
+        "nao",
+        "episode-07 video/source-layer review at 00:14:57.700-00:14:59.410: Nao in the pool says the Haru-chan line; overlapping layer preserved",
+        status="context_rule",
+        needs_review=True,
     ),
     # Episode 12 has two overlapping copies of Sora's apology in the source
     # subtitle layer.  The following reply addresses Sora and is Haruka's
