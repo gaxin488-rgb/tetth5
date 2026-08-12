@@ -29,3 +29,47 @@ way.
 
 After changing a report, regenerate the JSON, run `npm run check`, and deploy
 the Worker so the static mapping asset and API endpoint are updated together.
+
+## Reviewing unresolved cues
+
+Build the local review dashboard from the 1,812 remaining evidence cues:
+
+```powershell
+python scripts/build-cue-review-dashboard.py `
+  --evidence-root .\content\generated-subtitles\video-evidence\batch-review-remaining `
+  --output .\content\generated-subtitles\video-evidence\batch-review-remaining\review-dashboard.html
+```
+
+Open it through a local static server so the browser can read the MP4/JPG
+files (run this from the project root):
+
+```powershell
+python -m http.server 8765
+```
+
+Then open
+`http://127.0.0.1:8765/content/generated-subtitles/video-evidence/batch-review-remaining/review-dashboard.html`.
+
+Each card opens the source video, seeks to the cue start, stops at the cue end,
+shows the midpoint frame and lists the main/alternative candidates with score
+and margin. Decisions are saved locally in the browser and can be exported as
+`cue-review-decisions.json`; they are not considered confirmed until imported
+and audited against the report.
+
+Apply an exported file only after the four checks are complete. The default is
+validation-only; add `--apply` to write the named reports:
+
+```powershell
+python scripts/apply-cue-review-decisions.py `
+  --reports-dir .\content\generated-subtitles `
+  --decisions .\cue-review-decisions.json
+
+python scripts/apply-cue-review-decisions.py `
+  --reports-dir .\content\generated-subtitles `
+  --decisions .\cue-review-decisions.json `
+  --apply
+```
+
+Confirmed rows become `manual_audio_video_confirmed` and leave
+`needs_review`. Unresolved rows remain review-required. Regenerate the web
+mapping afterward; the VTT itself is not modified.
