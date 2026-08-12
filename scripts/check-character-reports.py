@@ -14,6 +14,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from vtt_time import format_interval
+
 
 REQUIRED_FIELDS = (
     "character_id",
@@ -25,6 +27,7 @@ REQUIRED_FIELDS = (
     "candidate_score",
     "candidate_margin",
     "alternatives",
+    "timestamp",
 )
 
 TIMESTAMP_EPSILON = 0.011
@@ -256,6 +259,17 @@ def validate_report(path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
                 }
             )
         else:
+            expected_timestamp = format_interval(start, end)
+            if row.get("timestamp") != expected_timestamp:
+                issues.append(
+                    {
+                        "type": "report_timestamp_field_mismatch",
+                        "episode": episode,
+                        "cue": cue,
+                        "report_timestamp": row.get("timestamp"),
+                        "expected_timestamp": expected_timestamp,
+                    }
+                )
             max_report_end = end if max_report_end is None else max(max_report_end, end)
             if previous_start is not None and start + TIMESTAMP_EPSILON < previous_start:
                 if has_prior_overlap(prior_intervals, start, end):
@@ -388,6 +402,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "cue",
         "start",
         "end",
+        "timestamp",
         "scene",
         "character_id",
         "character_name",
@@ -411,6 +426,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         for row in rows:
             data = dict(row)
             data["episode"] = data.get("id", "").split("-")[1] if data.get("id") else ""
+            data["timestamp"] = data.get("timestamp") or format_interval(data.get("start"), data.get("end"))
             data["alternatives"] = " | ".join(
                 f"{item.get('character_id')}:{item.get('score')}" for item in row.get("alternatives") or []
             )

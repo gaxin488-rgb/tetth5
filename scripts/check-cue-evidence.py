@@ -13,6 +13,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from vtt_time import format_interval
+
 
 EPISODE_RE = re.compile(r"-(\d{2})\.vi\.named\.segments\.json$")
 
@@ -122,7 +124,7 @@ def main() -> int:
                 counts[f"{name}_pass"] += int(passed)
                 if not passed:
                     counts[f"{name}_fail"] += 1
-                    issues.append({"cue": cue_key, "check": name, "video": str(video_path), "start": start, "end": end, "character_id": candidate_id, "detail": media.get("error") if name in {"video_file", "audio_stream", "timestamp"} else None})
+                    issues.append({"cue": cue_key, "check": name, "video": str(video_path), "start": start, "end": end, "timestamp": format_interval(start, end), "character_id": candidate_id, "detail": media.get("error") if name in {"video_file", "audio_stream", "timestamp"} else None})
 
     output = {
         "schema_version": 1,

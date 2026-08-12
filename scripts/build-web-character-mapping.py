@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from vtt_time import format_interval
+
 
 def age_band(character: dict[str, Any]) -> str:
     value = str(character.get("age_band") or "").strip()
@@ -62,6 +64,7 @@ def public_cue(row: dict[str, Any]) -> dict[str, Any]:
         "cue": int(row.get("cue") or 0),
         "start": float(row.get("start") or 0),
         "end": float(row.get("end") or 0),
+        "timestamp": row.get("timestamp") or format_interval(row.get("start"), row.get("end")),
         "character_id": row.get("character_id"),
         "character_name": row.get("character_name") or row.get("speaker_label") or "Người nói",
         "speaker_label": row.get("speaker_label") or row.get("character_name") or "Người nói",

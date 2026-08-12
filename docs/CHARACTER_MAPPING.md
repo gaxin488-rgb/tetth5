@@ -18,7 +18,8 @@ GET /api/movies/yosuga-no-sora/character-mapping?episode=7
 ```
 
 The response contains `characters` and an `episode.cues` array. Each cue keeps
-`start`, `end`, `character_id`, name, confidence, `match_status`,
+`start`, `end`, a formatted WebVTT `timestamp` (`HH:MM:SS.mmm --> HH:MM:SS.mmm`),
+`character_id`, name, confidence, `match_status`,
 `candidate_margin`, `needs_review`, and up to four alternative candidates.
 
 The player fetches this endpoint beside the VTT and renders the character name

@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from vtt_time import format_interval
+
 
 TIME_RE = re.compile(r"^\s*([0-9:.]+)\s*-->\s*([0-9:.]+)")
 
@@ -383,6 +385,7 @@ def build_named_report(
                 "id": f"episode-{episode}-cue-{index:04d}",
                 "start": start,
                 "end": end,
+                "timestamp": format_interval(start, end),
                 "text": cue["text"],
                 "scene": scene,
                 "machine_candidate_id": machine_candidate,

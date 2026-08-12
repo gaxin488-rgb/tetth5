@@ -97,6 +97,15 @@ ISSUES=0
 
 `ISSUES=0` chỉ có nghĩa là dữ liệu, cue, timestamp, video và route không có lỗi cấu trúc. Các cue chồng lớp đã được xác nhận từ nguồn sẽ được ghi ở `timestamp_check.intentional_overlapping_cues_preserved`, không bị coi là lỗi. Nó không có nghĩa tất cả tên nhân vật đã được nghe xác nhận.
 
+CSV có cả `start`, `end` dạng số giây và `timestamp` dạng WebVTT đầy đủ, ví dụ `00:00:02.640 --> 00:00:04.900`. Nếu report/evidence cũ được tạo trước khi có cột này, chạy migration local:
+
+```powershell
+& $Py .\scripts\migrate-vtt-timestamps.py `
+  --reports-dir .\content\generated-subtitles `
+  --evidence-root .\content\generated-subtitles\video-evidence `
+  --story-dir .\content\generated-subtitles\story-diagnosis
+```
+
 Có thể kiểm tra source code và cú pháp project thêm bằng:
 
 ```powershell
@@ -110,7 +119,7 @@ Mở file CSV bằng Excel hoặc lọc nhanh trong PowerShell:
 ```powershell
 Import-Csv .\content\generated-subtitles\yosuga-no-sora-character-check-02-12.csv |
   Where-Object { $_.needs_review -eq 'True' } |
-  Select-Object -First 30 episode,cue,start,end,character_id,character_name,candidate_score,candidate_margin,alternatives,match_status,text |
+  Select-Object -First 30 episode,cue,start,end,timestamp,character_id,character_name,candidate_score,candidate_margin,alternatives,match_status,text |
   Format-Table -Wrap
 ```
 
@@ -278,7 +287,7 @@ Các trường quan trọng gồm `recommended_character_id`, `recommendation_st
 
 ## Trạng thái bộ dữ liệu hiện tại
 
-Lần chạy checker hiện tại của tập 02–12 có 11 tập và 3.175 cue, trong đó còn 3.110 cue `needs_review`. Checker đang báo 2 lỗi timestamp không tăng dần trong nguồn: tập 07 cue 91 bắt đầu ở `465.15` sau cue 90 kết thúc ở `468.44`, và tập 12 cue 158 bắt đầu ở `1035.89` sau cue trước bắt đầu ở `1036.44`. Cần mở video kiểm tra hai đoạn này rồi sắp xếp/sửa timestamp trước khi coi bộ dữ liệu đạt.
+Lần chạy checker hiện tại của tập 02–12 có 11 tập và 3.175 cue, trong đó còn 1.812 cue `needs_review`. Hai cue chồng lớp ở tập 07/12 được giữ nguyên theo VTT nguồn và đã được checker ghi nhận là overlap có chủ đích.
 
 Evidence pack hiện đã trích 6 ảnh cho 2 cue lỗi, không lỗi tạo ảnh. Ảnh giúp kiểm tra bối cảnh nhân vật nhưng không thay thế việc nghe âm thanh; người trong khung hình có thể là người nghe chứ không phải người đang nói.
 

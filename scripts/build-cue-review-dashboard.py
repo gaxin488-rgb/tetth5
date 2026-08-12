@@ -116,7 +116,7 @@ function renderCue() {
     : '<span>Không có ảnh midpoint</span>';
   view.innerHTML = `<article class="cue ${saved.decision ? 'saved' : ''}">
     <header><h2>Tập ${esc(c.episode)} - cue ${esc(c.cue)}</h2><span class="status">${esc(c.match_status)} - needs_review=${Boolean(c.needs_review)}</span></header>
-    <p class="time"><b>${Number(c.start).toFixed(3)}s - ${Number(c.end).toFixed(3)}s</b> - duration ${(Number(c.end) - Number(c.start)).toFixed(3)}s</p>
+    <p class="time"><b>${esc(c.timestamp || '')}</b> · ${Number(c.start).toFixed(3)}s - ${Number(c.end).toFixed(3)}s · duration ${(Number(c.end) - Number(c.start)).toFixed(3)}s</p>
     <p class="text">${esc(c.text)}</p>
     <video id="cue-video" class="cue-video" controls preload="metadata" src="${esc(c.video_url)}" data-start="${Number(c.start).toFixed(3)}" data-end="${Number(c.end).toFixed(3)}"></video>
     <p class="small">Video: <code>${esc(c.video_url)}</code></p>

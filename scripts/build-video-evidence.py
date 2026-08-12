@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
 
+from vtt_time import format_interval
+
 
 TIMESTAMP_EPSILON = 0.011
 TIMESTAMP_RE = re.compile(r"^(?:(\d+):)?(\d{2}):(\d{2})[.,](\d{3})$")
@@ -383,7 +385,7 @@ def write_review_html(path: Path, evidence: list[dict[str, Any]], mapping: dict[
         rows.append(
             "<article>"
             f"<h2>{html.escape(str(item.get('episode')))} / cue {html.escape(str(item.get('cue')))} &mdash; {html.escape(str(item.get('character_name') or 'unresolved'))}</h2>"
-            f"<p><b>Time:</b> {item.get('start')}&ndash;{item.get('end')}s &nbsp; <b>Status:</b> {html.escape(str(item.get('match_status') or ''))}</p>"
+            f"<p><b>VTT time:</b> <code>{html.escape(str(item.get('timestamp') or format_interval(item.get('start'), item.get('end'))))}</code> &nbsp; <b>Seconds:</b> {item.get('start')}&ndash;{item.get('end')}s &nbsp; <b>Status:</b> {html.escape(str(item.get('match_status') or ''))}</p>"
             f"<p>{html.escape(str(item.get('text') or ''))}</p>"
             f'<p><a href="{html.escape(search)}" target="_blank" rel="noreferrer">Tìm thông tin nhân vật</a> &nbsp; <code>{html.escape(query)}</code></p>'
             f"<p><code>{ffplay_command}</code></p>"
@@ -550,6 +552,7 @@ def main() -> int:
                 "source_video_exists": source_video.is_file(),
                     "start": row.get("start"),
                     "end": row.get("end"),
+                    "timestamp": row.get("timestamp") or format_interval(row.get("start"), row.get("end")),
                     "text": row.get("text"),
                     "scene": row.get("scene"),
                     "character_id": character_id,
@@ -601,7 +604,7 @@ def main() -> int:
 
     csv_path = args.output_dir / "evidence.csv"
     with csv_path.open("w", encoding="utf-8-sig", newline="") as handle:
-        columns = ["episode", "cue", "start", "end", "character_id", "character_name", "match_status", "needs_review", "candidate_score", "candidate_margin", "research_query", "frames", "text"]
+        columns = ["episode", "cue", "start", "end", "timestamp", "character_id", "character_name", "match_status", "needs_review", "candidate_score", "candidate_margin", "research_query", "frames", "text"]
         writer = csv.DictWriter(handle, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         for item in evidence:

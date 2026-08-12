@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
 
+from vtt_time import format_interval
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -417,6 +419,7 @@ def diagnose_row(
         "id": row.get("id"),
         "start": row.get("start"),
         "end": row.get("end"),
+        "timestamp": row.get("timestamp") or format_interval(row.get("start"), row.get("end")),
         "scene": row.get("scene"),
         "story_scene_id": row.get("story_scene_id"),
         "text": row.get("text"),
@@ -486,7 +489,7 @@ def write_html(path: Path, rows: list[dict[str, Any]], title: str) -> None:
         cards.append(
             "<article>"
             f"<h2>Tập {html.escape(str(item.get('episode')))} / cue {html.escape(str(item.get('cue')))} — {html.escape(recommendation)}</h2>"
-            f"<p><b>Time:</b> {item.get('start')}–{item.get('end')}s · <b>Trạng thái:</b> {html.escape(str(item.get('recommendation_status')))}</p>"
+            f"<p><b>VTT time:</b> <code>{html.escape(str(item.get('timestamp') or format_interval(item.get('start'), item.get('end'))))}</code> · <b>Seconds:</b> {item.get('start')}–{item.get('end')}s · <b>Trạng thái:</b> {html.escape(str(item.get('recommendation_status')))}</p>"
             f"<p><b>Lời thoại:</b> {html.escape(str(item.get('text') or ''))}</p>"
             f"<p><b>Đang gán:</b> {html.escape(str(item.get('current_character_name') or 'chưa có'))} · <b>Ứng viên ngữ cảnh:</b> {html.escape(recommendation)}</p>"
             f"<p><b>Xưng hô:</b> {html.escape(str(item.get('translation_context', {}).get('hint') or ''))}</p>"
@@ -604,7 +607,7 @@ def main() -> int:
     json_path.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     csv_path = args.output_dir / "story-context-diagnosis.csv"
     columns = [
-        "episode", "cue", "start", "end", "scene", "text", "current_character_id", "current_character_name",
+        "episode", "cue", "start", "end", "timestamp", "scene", "text", "current_character_id", "current_character_name",
         "recommended_character_id", "recommended_character_name", "recommendation_status", "recommendation_would_change_label",
         "voice_score", "voice_margin", "context_margin", "addressed_character", "plot_signals", "pronoun_signals",
         "translation_hint", "candidate_alternatives", "nearby_before", "nearby_after", "evidence_frames", "do_not_auto_apply",
