@@ -9,7 +9,6 @@
   let movies = [];
   let toastTimer;
   const subtitleCache = new Map();
-  const characterMappingCache = new Map();
   const movieDetailCache = new Map();
   const IS_FILE_PREVIEW = location.protocol === 'file:';
   const assetUrl = value => {
@@ -171,67 +170,13 @@
       const start = toSeconds(timing[1]);
       const end = toSeconds(timing[2]);
       const cueText = lines.slice(timingIndex + 1).join('\n').trim();
-      return Number.isFinite(start) && Number.isFinite(end) && cueText ? { start, end, text: cueText } : null;
+      const dialogueText = cueText
+        .replace(/^\s*<v\b[^>]*>/i, '')
+        .replace(/<\/v>\s*$/i, '')
+        .replace(/^\s*\[[^\]\r\n]{1,80}\]\s*/, '')
+        .trim();
+      return Number.isFinite(start) && Number.isFinite(end) && dialogueText ? { start, end, text: dialogueText } : null;
     }).filter(Boolean);
-  }
-
-  async function loadCharacterMapping(slug, episodeNumber = 0) {
-    const episode = Number(episodeNumber || 0);
-    const cacheKey = `${slug}:${episode}`;
-    if (characterMappingCache.has(cacheKey)) return characterMappingCache.get(cacheKey);
-    const encodedSlug = encodeURIComponent(slug);
-    const query = episode > 0 ? `?episode=${encodeURIComponent(episode)}` : '';
-    const sources = IS_FILE_PREVIEW
-      ? [`./data/character-mappings/${encodedSlug}.json`]
-      : [`/api/movies/${encodedSlug}/character-mapping${query}`];
-    for (const source of sources) {
-      try {
-        const response = await fetch(source, { headers: { accept: 'application/json' }, cache: 'no-store' });
-        if (!response.ok) continue;
-        const payload = await response.json();
-        const selected = payload.episode || payload.episodes?.[String(episode).padStart(2, '0')] || null;
-        const mapping = { ...payload, episode: selected, cues: Array.isArray(selected?.cues) ? selected.cues : [] };
-        characterMappingCache.set(cacheKey, mapping);
-        return mapping;
-      } catch (error) {
-        console.warn('Không tải được mapping nhân vật:', error.message);
-      }
-    }
-    characterMappingCache.set(cacheKey, null);
-    return null;
-  }
-
-  function attachCharacterOverlay(video, mapping) {
-    const label = document.querySelector('#characterOverlay');
-    const toggle = document.querySelector('#speakerToggle');
-    const cues = Array.isArray(mapping?.cues) ? mapping.cues : [];
-    if (!label || !toggle || !cues.length) return;
-    let visible = store.get('cinezero_show_character_labels', true);
-    toggle.hidden = false;
-    const render = () => {
-      const now = Number(video.currentTime || 0);
-      const active = cues
-        .filter(cue => now >= Number(cue.start || 0) && now < Number(cue.end || 0))
-        .sort((a, b) => (Number(a.end || 0) - Number(a.start || 0)) - (Number(b.end || 0) - Number(b.start || 0)));
-      const cue = active[0];
-      const name = cue?.character_name || '';
-      label.textContent = visible ? name : '';
-      label.title = cue ? `${cue.character_id || 'unknown'} · ${cue.match_status || 'unknown'}` : '';
-      label.classList.toggle('visible', Boolean(visible && name));
-    };
-    const syncToggle = () => {
-      toggle.setAttribute('aria-pressed', String(visible));
-      toggle.textContent = visible ? 'Ẩn tên nhân vật' : 'Hiện tên nhân vật';
-    };
-    toggle.addEventListener('click', () => {
-      visible = !visible;
-      store.set('cinezero_show_character_labels', visible);
-      syncToggle();
-      render();
-    });
-    syncToggle();
-    ['loadedmetadata', 'timeupdate', 'seeking', 'seeked'].forEach(eventName => video.addEventListener(eventName, render));
-    render();
   }
 
   async function attachSubtitleOverlay(video, source, nativeTrack) {
@@ -288,7 +233,6 @@
     if (IS_FILE_PREVIEW || !video?.isConnected) return;
     try {
       const cacheKey = `${slug}:${episodeNumber || 0}`;
-      const mappingPromise = loadCharacterMapping(slug, episodeNumber);
       if (!subtitleCache.has(cacheKey)) {
         const query = episodeNumber > 0 ? `?episode=${encodeURIComponent(episodeNumber)}` : '';
         const response = await fetch(`/api/movies/${encodeURIComponent(slug)}/subtitles${query}`, { headers: { accept: 'application/json' } });
@@ -296,8 +240,6 @@
         const payload = await response.json();
         subtitleCache.set(cacheKey, Array.isArray(payload.subtitles) ? payload.subtitles : []);
       }
-      const mapping = await mappingPromise;
-      attachCharacterOverlay(video, mapping);
       const tracks = subtitleCache.get(cacheKey) || [];
       const status = document.querySelector('#subtitleStatus');
       if (!tracks.length || !video.isConnected) return;
@@ -320,8 +262,7 @@
       attachSubtitleOverlay(video, firstSource, firstNativeTrack);
       if (status) {
         status.hidden = false;
-        const mappedCount = mapping?.cues?.filter(cue => cue.character_id).length || 0;
-        status.textContent = `Có ${tracks.length} bản phụ đề rời · mapping nhân vật ${mappedCount}/${mapping?.cues?.length || 0} cue`;
+        status.textContent = `Có ${tracks.length} bản phụ đề rời · chỉ hiển thị lời thoại tiếng Việt`;
       }
     } catch (error) {
       console.warn('Không tải được phụ đề:', error.message);
@@ -348,10 +289,10 @@
     const episodePicker = episodes.length > 1
       ? `<div class='episode-picker'><label for='episodeSelect'>Chọn tập</label><select id='episodeSelect'>${episodes.map(episode => `<option value='${Number(episode.episode_number)}' ${Number(episode.episode_number) === episodeNumber ? 'selected' : ''}>${esc(episode.title || `Tập ${String(episode.episode_number).padStart(2, '0')}`)}</option>`).join('')}</select></div>`
       : episodes.length === 1 ? `<span class='episode-count'>${esc(episodeLabel)}</span>` : '';
-    app.innerHTML = `<section class='watch-page'><div class='player-shell'><div class='player-wrap'>${source ? `<video id='videoPlayer' controls playsinline preload='metadata' poster='${esc(m.backdrop_url)}'><source src='${esc(source)}' type='video/mp4'>Trình duyệt không hỗ trợ video HTML5.</video><div class='character-overlay' id='characterOverlay' aria-live='polite'></div><div class='subtitle-overlay' id='subtitleOverlay' aria-live='polite'></div>` : `<div class='player-empty'><div><h2>Chưa có video cho ${esc(episodeLabel || 'phim này')}</h2><p>Hãy upload bản MP4 lên R2 và cập nhật <strong>video_key</strong> của tập trong D1.</p><code>${esc(sourceKey || `episodes/${m.slug}/episode-${String(episodeNumber || 1).padStart(2, '0')}.mp4`)}</code></div></div>`}</div>
+    app.innerHTML = `<section class='watch-page'><div class='player-shell'><div class='player-wrap'>${source ? `<video id='videoPlayer' controls playsinline preload='metadata' poster='${esc(m.backdrop_url)}'><source src='${esc(source)}' type='video/mp4'>Trình duyệt không hỗ trợ video HTML5.</video><div class='subtitle-overlay' id='subtitleOverlay' aria-live='polite'></div>` : `<div class='player-empty'><div><h2>Chưa có video cho ${esc(episodeLabel || 'phim này')}</h2><p>Hãy upload bản MP4 lên R2 và cập nhật <strong>video_key</strong> của tập trong D1.</p><code>${esc(sourceKey || `episodes/${m.slug}/episode-${String(episodeNumber || 1).padStart(2, '0')}.mp4`)}</code></div></div>`}</div>
       <div class='watch-info'><div><span class='eyebrow'>Đang xem</span><h1>${esc(m.title)}${episodeLabel ? ` · ${esc(episodeLabel)}` : ''}</h1><div class='meta'><span>${esc(m.release_year)}</span><span>${esc(m.quality)}</span><span>${esc(m.genres.join(' · '))}</span></div></div><div class='watch-actions'><a class='button secondary' href='#movie/${encodeURIComponent(m.slug)}'>ⓘ Chi tiết</a><button class='button secondary' id='watchFavorite'>${isFavorite(m.slug) ? '♥ Đã lưu' : '♡ Lưu phim'}</button></div></div>
       ${episodePicker ? `<div class='episode-toolbar'>${episodePicker}</div>` : ''}
-      ${source ? `<div class='subtitle-tools'><p class='subtitle-status' id='subtitleStatus' hidden></p><button class='button secondary speaker-toggle' id='speakerToggle' type='button' aria-pressed='true' hidden>Ẩn tên nhân vật</button></div>` : ''}
+      ${source ? `<div class='subtitle-tools'><p class='subtitle-status' id='subtitleStatus' hidden></p></div>` : ''}
       ${source ? `<div class='progress-card'><div class='section-head'><div><strong>Tiến độ xem ${episodeLabel ? `· ${esc(episodeLabel)}` : ''}</strong><p id='progressText'>Đang đồng bộ trên thiết bị này</p></div></div><div class='progress-track'><div class='progress-value' id='progressValue'></div></div></div>` : ''}</div></section>`;
     document.querySelector('#watchFavorite').addEventListener('click', e => { toggleFavorite(m.slug); e.currentTarget.textContent = isFavorite(m.slug) ? '♥ Đã lưu' : '♡ Lưu phim'; });
     document.querySelector('#episodeSelect')?.addEventListener('change', event => { location.hash = `watch/${encodeURIComponent(slug)}/${event.currentTarget.value}`; });

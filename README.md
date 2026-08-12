@@ -210,7 +210,7 @@ không còn character_outside_route_cast
 VTT named không chứa <v ...> hoặc [Tên nhân vật]
 ```
 
-VTT hiển thị trên web phải giữ dạng phụ đề thoại tiếng Việt sạch, không gắn tên người nói vào nội dung. Báo cáo JSON/CSV dùng cho kiểm tra nội bộ; video và VTT không được đẩy lên GitHub nếu không cần thiết. Sau khi đạt các điều kiện trên mới upload VTT lên R2 và cập nhật track trong D1/website.
+VTT hiển thị trên web phải giữ dạng phụ đề thoại tiếng Việt sạch, không gắn tên người nói vào nội dung. Player cũng lọc an toàn các thẻ `<v ...>` và tiền tố `[Tên nhân vật]` nếu R2 còn sót file cũ. Mapping nhân vật chỉ lưu cho checker/report nội bộ; pipeline local mặc định không gắn nhãn, chỉ bật nhãn khi debug bằng `--show-speakers`. Báo cáo JSON/CSV dùng cho kiểm tra nội bộ; video và VTT không được đẩy lên GitHub nếu không cần thiết. Sau khi đạt các điều kiện trên mới upload VTT lên R2 và cập nhật track trong D1/website.
 
 ## 8. Trích ảnh tại timestamp và mapping nhân vật
 

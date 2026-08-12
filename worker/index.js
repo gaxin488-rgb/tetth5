@@ -296,6 +296,12 @@ async function serveMedia(request, env, rawKey) {
   if (!object) return json({ error: 'media_not_found' }, 404);
   const headers = new Headers(); object.writeHttpMetadata(headers); headers.set('etag', object.httpEtag); headers.set('accept-ranges','bytes');
   headers.set('cache-control', isCaption ? 'no-cache, must-revalidate' : (headers.get('cache-control') || 'public, max-age=86400'));
+  if (isCaption) {
+    const text = stripSubtitleSpeakerLabels(await object.text());
+    headers.set('content-type', key.toLowerCase().endsWith('.vtt') ? 'text/vtt; charset=utf-8' : 'text/plain; charset=utf-8');
+    headers.set('content-length', String(new TextEncoder().encode(text).byteLength));
+    return new Response(request.method === 'HEAD' ? null : text, { status: 200, headers });
+  }
   let status = 200;
   if (!isCaption && object.range && typeof object.range.offset === 'number') {
     status = 206; const end = object.range.offset + object.range.length - 1;
@@ -303,6 +309,13 @@ async function serveMedia(request, env, rawKey) {
     headers.set('content-length', String(object.range.length));
   } else headers.set('content-length', String(object.size));
   return new Response(request.method === 'HEAD' ? null : object.body, { status, headers });
+}
+
+function stripSubtitleSpeakerLabels(value) {
+  return String(value || '')
+    .replace(/<v\b[^>]*>/gi, '')
+    .replace(/<\/v>/gi, '')
+    .replace(/^\s*\[[^\]\r\n]{1,120}\]\s*/gm, '');
 }
 
 function mediaUrl(key) {

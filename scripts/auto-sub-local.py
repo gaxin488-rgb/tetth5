@@ -43,7 +43,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-speakers", type=int, default=None, help="Lower bound for automatic speaker count")
     parser.add_argument("--max-speakers", type=int, default=None, help="Upper bound for automatic speaker count")
     parser.add_argument("--no-align", action="store_true", help="Skip word alignment if the language has no alignment model")
-    parser.add_argument("--no-speakers", action="store_true", help="Do not add visible speaker labels to VTT cues")
+    parser.add_argument("--show-speakers", action="store_true", help="Debug only: add speaker labels to VTT cues")
+    parser.add_argument("--no-speakers", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--character-profile", default=os.getenv("CHARACTER_PROFILE"), help="JSON profile mapping diarization speaker IDs to characters")
     parser.add_argument("--pronoun-rules", default=os.getenv("PRONOUN_RULES"), help="JSON Vietnamese pronoun rule overrides")
     parser.add_argument("--voice-reference-profile", default=os.getenv("VOICE_REFERENCE_PROFILE"), help="JSON profile containing voice embeddings for named characters")
@@ -484,7 +485,7 @@ def main() -> int:
     kept, character_summary = apply_character_rules(kept, character_profile, pronoun_rules)
     character_summary["profile_path"] = str(profile_path) if character_profile else None
     character_summary["rules_path"] = str(rules_path) if pronoun_rules else None
-    vtt = build_vtt(kept, language, not args.no_speakers and not args.no_diarize)
+    vtt = build_vtt(kept, language, bool(args.show_speakers and not args.no_speakers and not args.no_diarize))
 
     output = Path(args.output or Path("content") / "generated-subtitles" / f"{args.slug}.{language}.vtt").expanduser().resolve()
     report = Path(args.report or output.with_suffix(".segments.json")).expanduser().resolve()

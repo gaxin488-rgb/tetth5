@@ -33,7 +33,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", required=True, help="Output WebVTT")
     parser.add_argument("--report-output", required=True, help="Output enriched JSON report")
     parser.add_argument("--language", default=None)
-    parser.add_argument("--no-speakers", action="store_true")
+    parser.add_argument("--show-speakers", action="store_true", help="Debug only: add speaker labels to VTT cues")
+    parser.add_argument("--no-speakers", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
 
 
@@ -62,7 +63,7 @@ def main() -> int:
     rules = json.loads(rules_path.read_text(encoding="utf-8")) if rules_path.is_file() else None
     enriched, summary = apply_character_rules(kept, profile, rules)
     language = args.language or str(source.get("language") or "und")
-    vtt = auto_sub.build_vtt(enriched, language, not args.no_speakers)
+    vtt = auto_sub.build_vtt(enriched, language, bool(args.show_speakers and not args.no_speakers))
 
     output_path = Path(args.output).expanduser().resolve()
     report_path = Path(args.report_output).expanduser().resolve()
