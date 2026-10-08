@@ -1,6 +1,6 @@
-1. Giai nen toan bo vao D:\web
+1. Giai nen source vao D:\web\CineZero_V2_D_web
 2. Mo PowerShell:
-   cd D:\web
+   cd D:\web\CineZero_V2_D_web
    Set-ExecutionPolicy -Scope Process Bypass -Force
    .\scripts\01-deploy-ngay.ps1
 3. Muon bat D1 + R2:

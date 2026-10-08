@@ -2,7 +2,7 @@
 
 ## Mở xem ngay trên Windows
 
-Giải nén toàn bộ thư mục `public` vào `D:\web`, sau đó mở `D:\web\index.html`. Bản V2 đã hỗ trợ `file://`, CSS, ảnh, JavaScript và dữ liệu mẫu đều hoạt động khi bấm trực tiếp file.
+Mở giao diện xem thử bằng `D:\web\MO_WEB.bat` hoặc `D:\web\preview\index.html`. Bản V2 hỗ trợ `file://`, CSS, ảnh, JavaScript và dữ liệu mẫu khi bấm trực tiếp file.
 
 > Website production vẫn nên deploy lên Cloudflare bằng script; chế độ mở file chỉ dùng để xem trước giao diện.
 
@@ -29,14 +29,14 @@ D:\web
 Kiến trúc production: PC nhận diện và kiểm tra phụ đề → GitHub lưu source/chạy kiểm tra → Cloudflare Workers Builds deploy → Cloudflare Worker/D1 phục vụ website/API → Cloudflare R2 lưu video và WebVTT.
 
 ## Cài vào D:\web
-Giải nén ZIP. Nếu ZIP tạo thêm thư mục `CineZero_D_web`, hãy chép toàn bộ nội dung bên trong vào `D:\web`.
+Giữ source trong `D:\web\CineZero_V2_D_web`. Bản preview nằm riêng trong `D:\web\preview`; các gói ZIP nằm trong `D:\web\releases`.
 
-Trong workspace hiện tại, source deploy đang nằm tại `D:\web\CineZero_V2_D_web`; hãy chạy các lệnh `npm` và `scripts\*.ps1` từ thư mục đó. `D:\web\index.html` chỉ là bản preview tĩnh.
+Chạy các lệnh `npm` và `scripts\*.ps1` từ `D:\web\CineZero_V2_D_web`. Không đặt video, cache hoặc file tạm vào thư mục gốc.
 
 ## Chạy triển khai đầu tiên
 
 ```powershell
-cd D:\web
+cd D:\web\CineZero_V2_D_web
 Set-ExecutionPolicy -Scope Process Bypass -Force
 .\scripts\01-deploy-ngay.ps1
 ```
