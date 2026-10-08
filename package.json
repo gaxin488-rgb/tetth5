@@ -10,6 +10,11 @@
     "db:schema": "wrangler d1 execute cinezero-db --remote --file=./schema.sql",
     "db:seed": "wrangler d1 execute cinezero-db --remote --file=./seed.sql",
     "subtitle:auto": "node scripts/auto-sub.mjs",
+    "subtitle:translate": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& ./.venv-subtitles/Scripts/python.exe ./scripts/translate-vtt-ct2.py\"",
+    "media:download": "node scripts/download-m3u8.mjs",
+    "media:compress": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/compress-video.ps1",
+    "media:compress-upload": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/compress-upload-r2.ps1",
+    "media:upload-multipart": "node scripts/upload-r2-multipart.mjs",
     "check": "node scripts/check-project.mjs"
   },
   "devDependencies": {

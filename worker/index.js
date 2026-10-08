@@ -30,9 +30,11 @@ async function handleApi(request, env, ctx, url) {
   if (url.pathname.startsWith('/api/movies/') && method === 'GET') return getMovie(env, decodeURIComponent(url.pathname.slice('/api/movies/'.length)));
   if (url.pathname === '/api/view' && method === 'POST') return recordView(request, env, ctx);
 
+
   if (url.pathname.startsWith('/api/admin/')) {
     const denied = authorize(request, env);
     if (denied) return denied;
+    if (url.pathname === '/api/admin/r2-multipart') return handleR2Multipart(request, env, url);
     if (url.pathname === '/api/admin/storage' && method === 'GET') return adminStorage(env, url);
     if (!env.DB) return json({ error: 'D1 chưa được cấu hình. Hãy dùng wrangler.full.jsonc.' }, 503);
     if (url.pathname === '/api/admin/movies' && method === 'GET') return adminListMovies(env);
@@ -47,6 +49,54 @@ async function handleApi(request, env, ctx, url) {
     if (url.pathname.startsWith('/api/admin/assets/') && method === 'PUT') return uploadSmallAsset(request, env, decodeURIComponent(url.pathname.slice('/api/admin/assets/'.length)));
   }
   return json({ error: 'not_found' }, 404);
+}
+
+async function handleR2Multipart(request, env, url) {
+  if (!env.VIDEO_BUCKET) return json({ error: 'R2 chưa được cấu hình' }, 503);
+
+  const key = String(url.searchParams.get('key') || '').trim();
+  const uploadId = String(url.searchParams.get('upload_id') || '').trim();
+  if (!key || key.includes('..') || key.startsWith('/') || key.length > 1024) return json({ error: 'invalid_key' }, 400);
+
+  if (request.method === 'POST' && url.searchParams.get('action') === 'create') {
+    const upload = await env.VIDEO_BUCKET.createMultipartUpload(key, {
+      httpMetadata: {
+        contentType: 'video/mp4',
+        cacheControl: 'public, max-age=31536000, immutable'
+      }
+    });
+    return json({ ok: true, key, upload_id: upload.uploadId }, 201);
+  }
+
+  if (!uploadId) return json({ error: 'upload_id_required' }, 400);
+  const upload = env.VIDEO_BUCKET.resumeMultipartUpload(key, uploadId);
+
+  if (request.method === 'PUT') {
+    const partNumber = Number(url.searchParams.get('part_number') || 0);
+    const length = Number(request.headers.get('content-length') || 0);
+    const maxPartBytes = 90 * 1024 * 1024;
+    if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) return json({ error: 'invalid_part_number' }, 400);
+    if (!length || length > maxPartBytes || !request.body) return json({ error: 'invalid_part_size', max_bytes: maxPartBytes }, 413);
+    const part = await upload.uploadPart(partNumber, request.body);
+    return json({ ok: true, part_number: part.partNumber, etag: part.etag }, 201);
+  }
+
+  if (request.method === 'POST' && url.searchParams.get('action') === 'complete') {
+    const body = await readJson(request);
+    const parts = Array.isArray(body.parts)
+      ? body.parts.map(part => ({ partNumber: Number(part.part_number ?? part.partNumber), etag: String(part.etag || '') }))
+      : [];
+    if (!parts.length || parts.some(part => !Number.isInteger(part.partNumber) || part.partNumber < 1 || !part.etag)) return json({ error: 'invalid_parts' }, 400);
+    const object = await upload.complete(parts);
+    return json({ ok: true, key, upload_id: uploadId, etag: object.etag, size: object.size });
+  }
+
+  if (request.method === 'DELETE') {
+    await upload.abort();
+    return json({ ok: true, aborted: true });
+  }
+
+  return json({ error: 'method_not_allowed' }, 405, { allow: 'POST, PUT, DELETE' });
 }
 
 function authorize(request, env) {

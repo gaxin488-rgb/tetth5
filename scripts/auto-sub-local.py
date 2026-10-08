@@ -21,6 +21,12 @@ from pathlib import Path
 from character_rules import apply_character_rules
 from reference_matching import apply_reference_map, extract_reference_embeddings, match_embeddings
 
+if hasattr(sys.stdout, "reconfigure"):
+    # Windows PowerShell may expose a legacy code page (for example cp932).
+    # Subtitle text and model diagnostics must remain Unicode-safe.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 NON_SPEECH_MARKER = re.compile(
     r"^\s*[\[(].*(?:music|song|sing|singing|instrumental|applause|laughter|noise|sound effect|âm nhạc|nhạc|vỗ tay|cười|tiếng động).*[\])]\s*$",

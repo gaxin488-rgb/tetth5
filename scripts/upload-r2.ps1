@@ -18,7 +18,7 @@ if (-not $SkipStorageGuard) {
   $encodedKey = [uri]::EscapeDataString($Key)
   $usage = Invoke-RestMethod -Method Get -Uri "$($GuardSite.TrimEnd('/'))/api/admin/storage?key=$encodedKey" -Headers @{ Authorization = "Bearer $GuardToken" }
   $fileBytes = [int64](Get-Item -LiteralPath $File).Length
-  if ([int64]$usage.remaining_bytes -lt $fileBytes) { throw "R2 storage limit 9 GB: con $($usage.remaining_bytes) bytes, file can $fileBytes bytes." }
+  if ([int64]$usage.remaining_bytes -lt $fileBytes) { throw "R2 storage limit $($usage.limit_gb) GB: con $($usage.remaining_bytes) bytes, file can $fileBytes bytes." }
   Write-Host "STORAGE_GUARD_PASS used=$($usage.bytes) limit=$($usage.limit_bytes)" -ForegroundColor DarkCyan
 }
 $CacheControl = if ($Key -match '\.(vtt|srt)$' -or $ContentType -match 'text/vtt|subrip') { 'public, max-age=60' } else { 'public, max-age=31536000, immutable' }
