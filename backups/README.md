@@ -1,6 +1,6 @@
-# MCP / Task Runner Backup Archive
+# Project backup archive
 
-Repository: `gaxin488-rgb/tetth5` (currently **PUBLIC**).
+Repository: `gaxin488-rgb/tetth5` (**PUBLIC**, approved for these non-sensitive test projects).
 
 ## Layout
 
@@ -9,20 +9,17 @@ backups/
   README.md
   projects/
     mcp-haha/
-      YYYY/MM/DD/<timestamp>/
+      YYYY/MM/DD/<UTC timestamp>/
         manifest.json
-        files/<relative-project-path>
+        files/<original relative path>
     h5/
-      YYYY/MM/DD/<timestamp>/
-        manifest.json
-        files/<relative-project-path>
     livesub/
     unity/
     blender/
 ```
 
-Each snapshot contains a manifest (UTC timestamp, SHA-256, relative paths and file sizes); never flatten different projects into one folder. Keep history in GitHub; local backups keep one `*.latest.bak` per original file. Verify GitHub commit and file hashes **before** removing any superseded local backup. A failed upload must never trigger local cleanup.
+A successful archive stores a manifest with timestamp, SHA-256, original relative paths and sizes. Backups never mix different projects into one folder. Keep long-term history in GitHub and only one latest local `*.latest.bak` per source file. Do not rotate local backup files on failed GitHub push.
 
-**SECURITY:** This repository is PUBLIC. Only pre-reviewed, nonsensitive text snapshots may be committed here. Never push `.env`, API keys, keystores, auth tokens, databases, player/user data, crash logs, private code or raw unsanitized project archives. Automated unreviewed backups MUST fail closed until a PRIVATE repository and authenticated git/gh are verified. No secrets should be stored in history, even temporarily. Update the repo setting before enabling live auto-upload.
+**PUBLIC BACKUPS ALLOWED:** User approved public storage of these project files. Selected source and documentation may be automatically archived following validation. Never commit `.env`, API keys, tokens, credentials, keystores, personal data, databases, private keys, or other sensitive files. Automated filtering is heuristic: only explicitly allowlisted source files intended for public release should be sent.
 
-For multi-project workflows supply explicit `metadata.project_root`, `metadata.project_slug`, and `backup_files` for editing stages. Every stage reloads applicable `AGENTS.md` from ancestor folders, with SHA-256 recorded in the task event log.
+For editable workflow stages, supply `metadata.project_root`, `metadata.project_slug`, and `backup_files`. Runner checks `AGENTS.md` before each stage. GitHub CLI `gh` and Git authentication are needed on the local Windows machine for unattended GitHub uploads; this is separate from the ChatGPT GitHub connector.
