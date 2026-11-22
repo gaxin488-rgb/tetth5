@@ -8,7 +8,10 @@ RESTRICTED = {".env", ".git", ".ssh", "secrets", "credentials", "node_modules", 
 SAFE_EXT = {".py",".cs",".kt",".java",".js",".ts",".tsx",".jsx",".md",".txt",".json",".xml",".yaml",".yml",".ps1",".bat",".html",".css",".sql",".toml"}
 SECRETS = re.compile(r"(?i)(private.key|api[_-]?key|password|secret[_-]?key)\s*[:=]\s*['\"]?\S{10,}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}")
 def run(args,cwd=None):
-    p=subprocess.run(args,cwd=cwd,stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=120)
+    env=os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"]="0"
+    env["GCM_INTERACTIVE"]="never"
+    p=subprocess.run(args,cwd=cwd,stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=120,env=env)
     if p.returncode: raise RuntimeError("Git operation failed: "+args[0]+"; exit="+str(p.returncode))
     return p.stdout.strip()
 def read_policy(root):
@@ -24,12 +27,12 @@ def read_policy(root):
     if not files: raise FileNotFoundError("No applicable AGENTS.md: "+str(folder))
     return files
 def github_repo_ready():
-    """Public GitHub destination is allowed; auth and exact repository are still required."""
-    if not shutil.which("git") or not shutil.which("gh"):
-        raise RuntimeError("Git and authenticated GitHub CLI required for automated backup")
-    visibility=run(["gh","repo","view",REPO,"--json","visibility","--jq",".visibility"]).upper()
-    if visibility not in ("PUBLIC","PRIVATE"):
-        raise PermissionError("Could not verify GitHub repository visibility")
+    """Public repo allowed. A fixed GitHub remote is accessed with noninteractive git."""
+    if not shutil.which("git"):
+        raise RuntimeError("git executable required for automated backup")
+    remote="https://github.com/"+REPO+".git"
+    run(["git","ls-remote","--exit-code",remote,"HEAD"])
+    return remote
 def prepare(root,files):
     base=Path(root).resolve(strict=True); entries=[]
     for name in files:
@@ -44,14 +47,14 @@ def prepare(root,files):
         entries.append((src,relative.as_posix(),raw,hashlib.sha256(raw).hexdigest()))
     return entries
 def archive(root,slug,entries):
-    github_repo_ready()  # Public repo permitted; never bypass secret/path checks.
+    remote=github_repo_ready()  # Public repo permitted; never bypass secret/path checks.
     slug=re.sub("[^a-z0-9_-]+","-",str(slug).lower()).strip("-")[:64]
     if not slug: raise ValueError("Invalid project slug")
     stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
     prefix="backups/projects/"+slug+"/"+stamp[:4]+"/"+stamp[5:7]+"/"+stamp[8:10]+"/"+stamp+"/"
     with tempfile.TemporaryDirectory(prefix="haha-backup-") as scratch:
         clone=Path(scratch)/"repo"
-        run(["gh","repo","clone",REPO,str(clone),"--","--depth","1"])
+        run(["git","clone","--quiet","--depth","1",remote,str(clone)])
         manifest=[]
         for _,rel,raw,sha in entries:
             dst=clone/prefix/"files"/rel;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(raw)
