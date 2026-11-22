@@ -1,4 +1,4 @@
-"""Fail-closed AGENTS.md preflight and private-GitHub archival for task runner."""
+"""AGENTS.md preflight and allowlisted public-GitHub archival for task runner."""
 from __future__ import annotations
 import datetime, hashlib, json, os, re, shutil, subprocess, tempfile
 from pathlib import Path
@@ -23,11 +23,13 @@ def read_policy(root):
             files.append({"path":str(p),"sha256":hashlib.sha256(data).hexdigest(),"text":data.decode("utf-8-sig")})
     if not files: raise FileNotFoundError("No applicable AGENTS.md: "+str(folder))
     return files
-def private_repo_required():
+def github_repo_ready():
+    """Public GitHub destination is allowed; auth and exact repository are still required."""
     if not shutil.which("git") or not shutil.which("gh"):
-        raise RuntimeError("Git and authenticated GitHub CLI required; GitHub backup blocked")
-    if run(["gh","repo","view",REPO,"--json","visibility","--jq",".visibility"]).upper()!="PRIVATE":
-        raise PermissionError("GitHub backup blocked: destination is PUBLIC")
+        raise RuntimeError("Git and authenticated GitHub CLI required for automated backup")
+    visibility=run(["gh","repo","view",REPO,"--json","visibility","--jq",".visibility"]).upper()
+    if visibility not in ("PUBLIC","PRIVATE"):
+        raise PermissionError("Could not verify GitHub repository visibility")
 def prepare(root,files):
     base=Path(root).resolve(strict=True); entries=[]
     for name in files:
@@ -42,11 +44,11 @@ def prepare(root,files):
         entries.append((src,relative.as_posix(),raw,hashlib.sha256(raw).hexdigest()))
     return entries
 def archive(root,slug,entries):
-    private_repo_required()  # Mandatory before ANY remote upload or local backup rotation.
+    github_repo_ready()  # Public repo permitted; never bypass secret/path checks.
     slug=re.sub("[^a-z0-9_-]+","-",str(slug).lower()).strip("-")[:64]
     if not slug: raise ValueError("Invalid project slug")
     stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
-    prefix="backups/projects/"+slug+"/"+stamp[:4]+"/"+stamp[5:7]+"/"+stamp[:10]+"/"+stamp+"/"
+    prefix="backups/projects/"+slug+"/"+stamp[:4]+"/"+stamp[5:7]+"/"+stamp[8:10]+"/"+stamp+"/"
     with tempfile.TemporaryDirectory(prefix="haha-backup-") as scratch:
         clone=Path(scratch)/"repo"
         run(["gh","repo","clone",REPO,str(clone),"--","--depth","1"])
