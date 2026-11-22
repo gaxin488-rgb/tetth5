@@ -1,0 +1,11 @@
+{
+  "project": "mcp-haha",
+  "timestamp_utc": "2026-11-22T14-01-07Z",
+  "files": [
+    {
+      "path": "task_policy_backup.py",
+      "sha256": "7de6ffb275fe258e30bcd5be53566c966322f31d587694dd7791bb487de54ebf",
+      "bytes": 5322
+    }
+  ]
+}
