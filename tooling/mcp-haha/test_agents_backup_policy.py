@@ -19,8 +19,22 @@ print("PASS: AGENTS hierarchy, report preflight, fail-closed source edit, backup
 
 # Public backup policy: repo visibility is no longer a reason to reject uploads.
 import inspect
-assert "PUBLIC" in inspect.getsource(policy.github_repo_ready)
-assert "PRIVATE" in inspect.getsource(policy.github_repo_ready)
+assert "ls-remote" in inspect.getsource(policy.github_repo_ready)
+assert "gh" not in inspect.getsource(policy.github_repo_ready).split("remote=")[0]
 assert "private_repo_required" not in inspect.getsource(policy.archive)
 assert policy.prepare(root,["task_policy_backup.py"])
 print("PASS: public destination allowed after file screening (no GitHub upload in smoke test)")
+
+with tempfile.TemporaryDirectory() as folder:
+    example=Path(folder)
+    (example/"safe.py").write_text("print('hello')\n",encoding="utf-8")
+    assert len(policy.prepare(folder,["safe.py"]))==1
+    (example/".env").write_text("TOKEN=dummy\n",encoding="utf-8")
+    try: policy.prepare(folder,[".env"])
+    except ValueError: pass
+    else: raise AssertionError("public upload accepted .env")
+    (example/"secret.py").write_text("api_key = 'ghp_"+"x"*30+"'\n",encoding="utf-8")
+    try: policy.prepare(folder,["secret.py"])
+    except ValueError: pass
+    else: raise AssertionError("public upload accepted secret")
+print("PASS: allowlisted public backup and sensitive-content refusals")
