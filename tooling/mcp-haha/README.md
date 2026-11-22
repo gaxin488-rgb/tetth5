@@ -16,7 +16,7 @@ The user has explicitly approved **PUBLIC** storage for these low-value projects
 
 Even in PUBLIC repositories, never back up `.env`, credentials, secrets, keystores, private personal data or unscreened full-directory archives. Automated content scanning is heuristic and may miss secrets. Limit `backup_files` to source and documentation intentionally approved for public release.
 
-The local worker requires working `git` and authenticated `gh` command-line tools. Having an authorized ChatGPT GitHub connector does not automatically authenticate GitHub CLI on the Windows machine.
+The local worker uses noninteractive `git` with the existing Windows Git credentials (Git Credential Manager or another configured helper). It does not need GitHub CLI (`gh`). A connected ChatGPT GitHub account does not automatically give the Windows Git process push credentials.
 
 ## Structure
 
