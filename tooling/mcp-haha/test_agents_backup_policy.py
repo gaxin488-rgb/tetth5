@@ -16,3 +16,11 @@ else: raise AssertionError("Missing backup_files was not rejected")
 stage=engine.stage_spec({"id":"src","command":"Write-Output safe","gate_type":"source_edit","backup_files":["task_engine.py"]},0)
 assert stage["backup_files"]==["task_engine.py"]
 print("PASS: AGENTS hierarchy, report preflight, fail-closed source edit, backup_files persistence; no network writes")
+
+# Public backup policy: repo visibility is no longer a reason to reject uploads.
+import inspect
+assert "PUBLIC" in inspect.getsource(policy.github_repo_ready)
+assert "PRIVATE" in inspect.getsource(policy.github_repo_ready)
+assert "private_repo_required" not in inspect.getsource(policy.archive)
+assert policy.prepare(root,["task_policy_backup.py"])
+print("PASS: public destination allowed after file screening (no GitHub upload in smoke test)")
