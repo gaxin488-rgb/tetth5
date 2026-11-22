@@ -1,23 +1,27 @@
 # MCP haha task runner integration
 
-This directory contains the reviewed preflight module and a smoke test. The active local integration is in `D:\MCP\orchestrator\task_engine.py` (not published here because it belongs to the local MCP installation).
+This directory documents the working local task-runner hook at `D:\MCP\orchestrator\task_engine.py`, along with the policy module and tests.
 
-## Behavior
+## Workflow
 
-1. Every stage invokes `stage_preflight()` and re-reads ancestor `AGENTS.md` files.
-2. Stage events capture file paths and SHA-256 hashes of applicable policy files.
-3. Editing stage types `code_edit` and `source_edit` must provide `metadata.project_root` and the exact `backup_files` list.
-4. Private repo verification, path validation, binary/secret heuristics, and upload happen before local `*.latest.bak` rotation.
-5. On any blocked or failed upload, the editing stage fails closed and existing local backups remain untouched.
+1. Before every stage: re-read applicable ancestor `AGENTS.md` files.
+2. Store the instruction file paths and SHA-256 hashes in task events.
+3. Source editing stages (`source_edit` and `code_edit`) require `metadata.project_root` and an explicit list of `backup_files`.
+4. Before writing source: validate file paths/extensions, screen for binary content and recognizable credentials, and archive selected allowed files in `gaxin488-rgb/tetth5`.
+5. GitHub history retains earlier snapshots. Only after a successful push, rotate local `*.latest.bak` per source. A failed push blocks the stage and preserves existing local backups.
 
-## Security
+## Repository visibility
 
-The chosen backup repository `gaxin488-rgb/tetth5` is currently **PUBLIC**. Raw backup uploads are intentionally blocked. The test must not publish source or secret data. Current filtering is heuristic and not a substitute for secret scanning and access-policy review. Do not enable production automated archival until the destination is PRIVATE and a restore test is successful.
+The user has explicitly approved **PUBLIC** storage for these low-value projects. The backup code therefore accepts PUBLIC or PRIVATE GitHub repositories; PRIVATE visibility is no longer required.
 
-## Archive layout
+Even in PUBLIC repositories, never back up `.env`, credentials, secrets, keystores, private personal data or unscreened full-directory archives. Automated content scanning is heuristic and may miss secrets. Limit `backup_files` to source and documentation intentionally approved for public release.
+
+The local worker requires working `git` and authenticated `gh` command-line tools. Having an authorized ChatGPT GitHub connector does not automatically authenticate GitHub CLI on the Windows machine.
+
+## Structure
 
 `backups/projects/<project-slug>/YYYY/MM/DD/YYYY-MM-DDTHH-MM-SSZ/{manifest.json,files/...}`.
 
 ## Scope
 
-This hook covers stages launched through this task engine, not every existing standalone haha MCP action. A global gateway middleware/interceptor is still required for universal enforcement.
+The current preflight covers stages executed by this specific task engine, not all standalone MCP actions. Full gateway enforcement remains separate work.
