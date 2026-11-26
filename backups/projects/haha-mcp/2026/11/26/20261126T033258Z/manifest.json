@@ -1,0 +1,11 @@
+{
+  "backup_time_utc": "2026-11-26T03:32:58Z",
+  "project_slug": "haha-mcp",
+  "files": [
+    {
+      "path": "hihi_banphim_gateway.py",
+      "size_bytes": 71669,
+      "sha256": "2b4d0ea8dd7a25f6089e64c13fa27b86a05d57d2382b1693025491d84d15d878"
+    }
+  ]
+}
