@@ -1,0 +1,16 @@
+{
+  "project": "work",
+  "timestamp_utc": "2026-11-26T22-36-18Z",
+  "files": [
+    {
+      "path": "app/src/main/java/com/example/livesub/NetworkSecurityInterceptor.kt",
+      "sha256": "91d3fa46c9f89fb2d636a32e991da3c520eefb77fa19b0e4a574829c80fa75fd",
+      "bytes": 49729
+    },
+    {
+      "path": "app/src/test/java/com/example/livesub/HlsMediaAccessPolicyTest.kt",
+      "sha256": "9acecbc65d57b0f952e4236dd12c2b216cdc2ccd75c409854106a3e05cb5a4ac",
+      "bytes": 3934
+    }
+  ]
+}
