@@ -1,0 +1,21 @@
+{
+  "project": "work",
+  "timestamp_utc": "2026-11-26T22-13-16Z",
+  "files": [
+    {
+      "path": "app/src/main/java/com/example/livesub/WebBridgeAndStealth.kt",
+      "sha256": "4b45e2b3c1e95d0d1051422dc52b2bb2cfa67a832b73d2a2b0d541b17a658139",
+      "bytes": 62154
+    },
+    {
+      "path": "app/src/main/java/com/example/livesub/HlsBrowserSegmentReader.kt",
+      "sha256": "c1278b5484a1055bfad795413df7fe011696bda7f4a8f308e16d8eefa1b15f26",
+      "bytes": 6149
+    },
+    {
+      "path": "app/src/test/java/com/example/livesub/HlsMediaAccessPolicyTest.kt",
+      "sha256": "63e44e2a2e846f991e7012028cd90248c99ad124ef89d58eb88fa86e08056b61",
+      "bytes": 3555
+    }
+  ]
+}
