@@ -1,0 +1,21 @@
+{
+  "project": "work",
+  "timestamp_utc": "2026-11-27T00-43-22Z",
+  "files": [
+    {
+      "path": "app/src/main/java/com/example/livesub/HlsVodSubtitleGenerator.kt",
+      "sha256": "d63ede73074994db560121b3523b6699ae673ac500eb04728168e05cb0572f1e",
+      "bytes": 67260
+    },
+    {
+      "path": "app/src/main/java/com/example/livesub/HlsParallelApiOptimizer.kt",
+      "sha256": "d0f7cc52a03c43cd43615a0b47694efd92ca48f5162fcd572df407a1d414d5af",
+      "bytes": 4957
+    },
+    {
+      "path": "app/src/test/java/com/example/livesub/HlsParallelApiOptimizerTest.kt",
+      "sha256": "93c2c397001fd5b5a1e9ecf83da45f1ad69e97a83480e80f14ec82410b22ac5e",
+      "bytes": 3338
+    }
+  ]
+}
